@@ -8,7 +8,8 @@
   "scripts": {
     "dev": "next dev --hostname 0.0.0.0",
     "build": "next build",
-    "check": "biome check . && next typegen && tsc --noEmit"
+    "lint:deps": "depcruise .",
+    "check": "biome check . && next typegen && tsc --noEmit && depcruise ."
   },
   "dependencies": {
     "next": "16.4.6",
@@ -21,6 +22,7 @@
     "@types/node": "^24.0.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
+    "dependency-cruiser": "18.7.2",
     "tailwindcss": "4.3.5",
     "typescript": "^5.9.0"
   }
