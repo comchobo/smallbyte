@@ -1,0 +1,36 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    env:
+      POSTGRES_USER: smallbyte
+      POSTGRES_PASSWORD: ci-only-password
+      POSTGRES_DB: smallbyte
+      DOMAIN: :80
+      LEFTHOOK: 0
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: docker compose -f compose.dev.yaml build web api
+      - run: docker compose -f compose.dev.yaml up -d --wait db
+      - run: pnpm exec lefthook run pre-push --force
+        env:
+          LEFTHOOK: 1
+      - if: failure()
+        run: docker compose -f compose.dev.yaml logs --no-color
+      - if: always()
+        run: docker compose -f compose.dev.yaml down --volumes --remove-orphans
