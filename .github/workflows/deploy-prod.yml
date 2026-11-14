@@ -1,0 +1,38 @@
+name: Deploy Prod
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-prod
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: webfactory/ssh-agent@v0.9.1
+        with:
+          ssh-private-key: ${{ secrets.PROD_DEPLOY_SSH_KEY }}
+      - name: Deploy via SSH
+        run: |
+          ssh -o StrictHostKeyChecking=accept-new "${{ secrets.PROD_DEPLOY_USER }}@${{ secrets.PROD_DEPLOY_HOST }}" <<'EOF'
+          set -e
+          mkdir -p /home/ubuntu/smallbyte
+          cd /home/ubuntu/smallbyte
+          if [ ! -d .git ]; then
+            git init
+            git remote add origin https://github.com/comchobo/smallbyte.git
+          fi
+          git fetch origin
+          git reset --hard origin/main
+          if [ ! -f .env.prod ]; then
+            echo "Missing /home/ubuntu/smallbyte/.env.prod" >&2
+            exit 1
+          fi
+          docker compose -f compose.prod.yaml --env-file .env.prod up -d --build --wait --wait-timeout 300
+          EOF
