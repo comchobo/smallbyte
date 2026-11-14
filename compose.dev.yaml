@@ -1,0 +1,68 @@
+services:
+  web:
+    image: smallbyte-web:dev
+    build:
+      context: ./web
+      target: development
+    command: sh -c "CI=true pnpm install --frozen-lockfile && pnpm dev"
+    environment:
+      API_ORIGIN: http://api:8000
+      NEXT_DIST_DIR: .next-dev
+    ports:
+      - "127.0.0.1:${WEB_PORT:-3000}:3000"
+    volumes:
+      - ./web:/app
+      - web_modules:/app/node_modules
+      - web_store:/pnpm/store
+      - web_next:/app/.next
+      - web_next_dev:/app/.next-dev
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      start_period: 30s
+      retries: 5
+  api:
+    image: smallbyte-api:dev
+    build:
+      context: ./api
+      target: development
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-smallbyte}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+      POSTGRES_DB: ${POSTGRES_DB:-smallbyte}
+      POSTGRES_HOST: db
+    volumes:
+      - ./api:/app
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/health/ready', timeout=4)"]
+      interval: 10s
+      timeout: 5s
+      start_period: 10s
+      retries: 5
+  db:
+    image: postgres:17-bookworm
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-smallbyte}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+      POSTGRES_DB: ${POSTGRES_DB:-smallbyte}
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\" -d \"$$POSTGRES_DB\""]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  web_modules:
+  web_store:
+  web_next:
+  web_next_dev:
+  db_data:

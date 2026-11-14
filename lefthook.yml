@@ -1,0 +1,22 @@
+pre-commit:
+  parallel: true
+  commands:
+    web:
+      run: docker compose -f compose.dev.yaml run --rm --no-deps -e NEXT_DIST_DIR=.next web sh -c 'CI=true pnpm install --frozen-lockfile && pnpm check'
+    api:
+      run: docker compose -f compose.dev.yaml run --rm --no-deps api sh -c 'uv run --locked ruff check . && uv run --locked ruff format --check . && uv run --locked ty check'
+
+pre-push:
+  commands:
+    static:
+      run: pnpm exec lefthook run pre-commit --force
+      priority: 1
+    web-build:
+      run: docker compose -f compose.dev.yaml run --rm --no-deps -e NEXT_DIST_DIR=.next web sh -c 'CI=true pnpm install --frozen-lockfile && pnpm build'
+      priority: 2
+    api-tests:
+      run: docker compose -f compose.dev.yaml run --rm --no-deps api uv run --locked pytest
+      priority: 3
+    compose:
+      run: docker compose -f compose.dev.yaml config --quiet && docker compose -f compose.prod.yaml config --quiet
+      priority: 4

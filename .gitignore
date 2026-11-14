@@ -14,7 +14,7 @@ dist/
 downloads/
 eggs/
 .eggs/
-lib/
+/lib/
 lib64/
 parts/
 sdist/
@@ -218,3 +218,9 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+node_modules/
+.next*/
+next-env.d.ts
+*.tsbuildinfo
+.pnpm-store/
+.playwright-cli/

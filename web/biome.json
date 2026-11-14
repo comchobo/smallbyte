@@ -1,0 +1,16 @@
+{
+  "$schema": "https://biomejs.dev/schemas/2.6.7/schema.json",
+  "files": {
+    "includes": [
+      "**",
+      "!!pnpm-lock.yaml",
+      "!!next-env.d.ts",
+      "!!.next*",
+      "!!.pnpm-store",
+      "!!node_modules"
+    ]
+  },
+  "formatter": { "indentStyle": "space" },
+  "css": { "parser": { "tailwindDirectives": true } },
+  "assist": { "actions": { "source": { "organizeImports": "on" } } }
+}
