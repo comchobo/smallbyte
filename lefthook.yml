@@ -4,7 +4,7 @@ pre-commit:
     web:
       run: docker compose -f compose.dev.yaml run --rm --no-deps -e NEXT_DIST_DIR=.next web sh -c 'CI=true pnpm install --frozen-lockfile && pnpm check'
     api:
-      run: docker compose -f compose.dev.yaml run --rm --no-deps api sh -c 'uv run --locked ruff check . && uv run --locked ruff format --check . && uv run --locked ty check'
+      run: docker compose -f compose.dev.yaml run --rm --no-deps api sh -c 'uv run --locked ruff check . && uv run --locked ruff format --check . && PYTHONPATH=. uv run --locked lint-imports && uv run --locked ty check'
 
 pre-push:
   commands:
