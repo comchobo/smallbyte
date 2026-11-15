@@ -16,6 +16,10 @@ jobs:
       POSTGRES_PASSWORD: ci-only-password
       POSTGRES_DB: smallbyte
       DOMAIN: :80
+      APP_ORIGIN: http://localhost:3000
+      GITHUB_CLIENT_ID: ci-placeholder
+      GITHUB_CLIENT_SECRET: ci-placeholder
+      OLLAMA_API_KEY: ci-placeholder
       LEFTHOOK: 0
     steps:
       - uses: actions/checkout@v4

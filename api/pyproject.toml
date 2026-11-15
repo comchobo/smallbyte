@@ -10,11 +10,11 @@ dependencies = [
     "sqlalchemy[asyncio]>=2.0,<2.1",
     "alembic>=1.15,<2",
     "pydantic-settings>=2.8,<3",
+    "httpx>=0.28,<1",
 ]
 
 [dependency-groups]
 dev = [
-    "httpx>=0.28,<1",
     "import-linter>=2.16,<3",
     "pytest>=8.3,<10",
     "pytest-asyncio>=1,<2",
