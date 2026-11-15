@@ -336,7 +336,7 @@ async def test_oauth_success_creates_hashed_thirty_day_session(
     completed = await client.get(
         "/api/auth/github/callback", params={"state": state, "code": "valid-code"}
     )
-    assert "#page=home" in completed.headers["location"]
+    assert completed.headers["location"] == get_settings().app_origin + "/home"
     raw = completed.cookies[auth.COOKIE]
     async with AsyncSession(test_engine) as db:
         session = await db.get(LoginSession, auth.digest(raw))
@@ -551,8 +551,8 @@ async def test_oauth_state_is_browser_bound_and_one_time(client, monkeypatch):
     cancelled = await client.get(
         "/api/auth/github/callback", params={"state": state, "error": "access_denied"}
     )
-    assert "auth=failed" in cancelled.headers["location"]
+    assert cancelled.headers["location"] == settings.app_origin + "/login?auth=failed"
     replayed = await client.get(
         "/api/auth/github/callback", params={"state": state, "code": "replayed"}
     )
-    assert "auth=failed" in replayed.headers["location"]
+    assert replayed.headers["location"] == settings.app_origin + "/login?auth=failed"
