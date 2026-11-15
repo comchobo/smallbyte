@@ -1,7 +1,9 @@
 "use client";
 
+import Link from "next/link";
 import { useId, useState } from "react";
 import type { Task } from "@/lib/learning";
+import { pageHref } from "@/lib/routes";
 
 const points = [
   [150, 320],
@@ -16,14 +18,12 @@ export function CourseMap({
   passed = [],
   focus,
   mini = false,
-  onSelect,
 }: {
   tasks: Task[];
   order: string[];
   passed?: string[];
   focus?: string | null;
   mini?: boolean;
-  onSelect?: (id: string) => void;
 }) {
   const [leg, setLeg] = useState(false);
   const [hover, setHover] = useState<string | null>(null);
@@ -39,7 +39,6 @@ export function CourseMap({
         <div className="course-head">
           <div>
             <h2>학습 코스</h2>
-            <span className="small muted">4개 컨트롤 · 나의 웹 CS 코스</span>
           </div>
           <div className="seg">
             <button
@@ -60,19 +59,19 @@ export function CourseMap({
           <div className="map-legend">
             <span>
               <i className="terrain-key" />
-              지형 = 개념 영역
+              개념 영역
             </span>
             <span>
               <i className="route-key" />
-              보라 = 코스
+              학습 코스
             </span>
             <span>
               <i className="route-key thick" />
-              굵은 선 = 지금 구간
+              현재 구간
             </span>
             <span>
               <i className="done-key" />
-              올리브 원 = 완료
+              완료
             </span>
           </div>
         </div>
@@ -178,17 +177,9 @@ export function CourseMap({
               const [x, y] = points[i];
               const done = passed.includes(id);
               return (
-                <a
+                <Link
                   key={id}
-                  href={`#page=preview&task=${id}`}
-                  onClick={
-                    onSelect
-                      ? (e) => {
-                          e.preventDefault();
-                          onSelect(id);
-                        }
-                      : undefined
-                  }
+                  href={pageHref("preview", id)}
                   onMouseEnter={() => setHover(id)}
                   onMouseLeave={() => setHover(null)}
                   onFocus={() => setHover(id)}
@@ -252,14 +243,11 @@ export function CourseMap({
                   >
                     {t?.concept}
                   </text>
-                </a>
+                </Link>
               );
             })}
           </g>
         </svg>
-        <span className="north" aria-hidden="true">
-          N ↑
-        </span>
       </div>
       {!mini && (
         <table className="course-table">
@@ -276,8 +264,8 @@ export function CourseMap({
               <tr key={id} className={hover === id ? "linked" : ""}>
                 <td>{i + 1}</td>
                 <td>
-                  <a
-                    href={`#page=preview&task=${id}`}
+                  <Link
+                    href={pageHref("preview", id)}
                     onMouseEnter={() => setHover(id)}
                     onMouseLeave={() => setHover(null)}
                     onFocus={() => setHover(id)}
@@ -288,7 +276,7 @@ export function CourseMap({
                       {tasks.find((t) => t.id === id)?.concept} ·{" "}
                       {tasks.find((t) => t.id === id)?.minutes}분
                     </small>
-                  </a>
+                  </Link>
                 </td>
                 <td>
                   <span
