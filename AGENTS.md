@@ -1,0 +1,3 @@
+# Repository Guidelines
+
+- Always perform development, testing, and debugging inside the `compose.dev.yaml` environment.
