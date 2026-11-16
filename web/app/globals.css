@@ -316,9 +316,10 @@ ol {
   outline: 0;
 }
 .site-footer {
-  max-width: 1280px;
+  width: calc(100% - 56px);
+  max-width: 1224px;
   margin: 0 auto;
-  padding: 24px 28px;
+  padding: 24px 0;
   border-top: 1px solid var(--line);
 }
 .site-footer nav {
@@ -1816,7 +1817,7 @@ summary {
     padding: 22px 18px 32px;
   }
   .site-footer {
-    padding-inline: 18px;
+    width: calc(100% - 36px);
   }
   .entry {
     padding-top: 10px;
