@@ -73,6 +73,17 @@ export type Activity = {
   today: string;
   days: { date: string; count: number }[];
 };
+export type Leaderboard = {
+  start: string;
+  today: string;
+  items: {
+    id: string;
+    name: string;
+    handle: string;
+    count: number;
+    rank: number;
+  }[];
+};
 
 export class ApiError extends Error {
   constructor(

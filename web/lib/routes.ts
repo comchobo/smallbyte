@@ -6,6 +6,7 @@ const paths = {
   task: "/task",
   assessment: "/assessment",
   history: "/history",
+  leaderboard: "/leaderboard",
   mypage: "/mypage",
 } as const;
 
