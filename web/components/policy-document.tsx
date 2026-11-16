@@ -1,4 +1,3 @@
-import Link from "next/link";
 import type { ReactNode } from "react";
 import {
   POLICY_CONTACT,
@@ -21,7 +20,7 @@ export function PolicyDocument({
   children: ReactNode;
 }) {
   return (
-    <main className="page policy-page" id="main">
+    <main className="page policy-page" id="main" tabIndex={-1}>
       <header className="policy-head">
         <p className="policy-eyebrow">smallbyte 정책</p>
         <h1>{title}</h1>
@@ -46,9 +45,6 @@ export function PolicyDocument({
             </dd>
           </div>
         </dl>
-        <Link className="policy-back" href="/">
-          홈으로 돌아가기
-        </Link>
       </header>
       <div className="policy-layout">
         <nav className="policy-toc" aria-label="목차">
