@@ -551,8 +551,8 @@ async def test_oauth_state_is_browser_bound_and_one_time(client, monkeypatch):
     cancelled = await client.get(
         "/api/auth/github/callback", params={"state": state, "error": "access_denied"}
     )
-    assert cancelled.headers["location"] == settings.app_origin + "/login?auth=failed"
+    assert cancelled.headers["location"] == settings.app_origin + "/?auth=failed"
     replayed = await client.get(
         "/api/auth/github/callback", params={"state": state, "code": "replayed"}
     )
-    assert replayed.headers["location"] == settings.app_origin + "/login?auth=failed"
+    assert replayed.headers["location"] == settings.app_origin + "/?auth=failed"
