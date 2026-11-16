@@ -46,7 +46,7 @@ class LoginSession(SQLModel, table=True):
     token_hash: str = Field(primary_key=True)
     user_id: str = Field(foreign_key="users.id", index=True)
     expires_at: datetime = Field(
-        sa_column=Column(DateTime(timezone=True), nullable=False)
+        sa_column=Column(DateTime(timezone=True), nullable=False, index=True)
     )
 
 
@@ -55,7 +55,7 @@ class OAuthState(SQLModel, table=True):
     state_hash: str = Field(primary_key=True)
     browser_hash: str
     expires_at: datetime = Field(
-        sa_column=Column(DateTime(timezone=True), nullable=False)
+        sa_column=Column(DateTime(timezone=True), nullable=False, index=True)
     )
 
 
