@@ -10,6 +10,7 @@ export function CourseMap({
   order,
   passed = [],
   focus,
+  activeTaskId,
   mini = false,
   requiresLogin = false,
 }: {
@@ -17,6 +18,7 @@ export function CourseMap({
   order: string[];
   passed?: string[];
   focus?: string | null;
+  activeTaskId?: string | null;
   mini?: boolean;
   requiresLogin?: boolean;
 }) {
@@ -41,6 +43,9 @@ export function CourseMap({
         {course.map((task, index) => {
           const done = passed.includes(task.id);
           const current = focus === task.id;
+          const locked = Boolean(
+            activeTaskId && activeTaskId !== task.id && !done,
+          );
           const status = current
             ? done
               ? "복습 중"
@@ -62,7 +67,9 @@ export function CourseMap({
                 aria-current={current ? "step" : undefined}
               >
                 <span className="course-stop-number" aria-hidden="true">
-                  {done && !current ? (
+                  {locked ? (
+                    <Icon name="lock" />
+                  ) : done && !current ? (
                     <svg
                       viewBox="0 0 24 24"
                       fill="none"
@@ -80,6 +87,11 @@ export function CourseMap({
                   <strong>{task.concept}</strong>
                   <span className="course-stop-status">
                     {status} · {task.minutes}분
+                    {locked && (
+                      <span className="sr-only">
+                        · 진행 중인 과제를 마친 뒤 시작할 수 있습니다
+                      </span>
+                    )}
                   </span>
                   {!mini && (
                     <span className="course-stop-title">{task.title}</span>
