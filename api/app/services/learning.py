@@ -17,6 +17,7 @@ from app.schemas.learning import Answer, ProfileUpdate
 from app.services import providers
 
 logger = logging.getLogger(__name__)
+ACTIVITY_WEEKS = 26
 
 
 def profile(user: User) -> dict[str, Any]:
@@ -354,7 +355,8 @@ async def history(
 async def activity(db: AsyncSession, user: User) -> dict[str, Any]:
     zone = ZoneInfo("Asia/Seoul")
     today = now().astimezone(zone).date()
-    start_date = today - timedelta(days=(today.weekday() + 1) % 7 + 25 * 7)
+    days_since_sunday = (today.weekday() + 1) % 7
+    start_date = today - timedelta(days=days_since_sunday, weeks=ACTIVITY_WEEKS - 1)
     events = await db.exec(
         select(ActivityEvent).where(
             ActivityEvent.user_id == user.id,
@@ -363,7 +365,7 @@ async def activity(db: AsyncSession, user: User) -> dict[str, Any]:
     )
     counts = Counter(e.created_at.astimezone(zone).date().isoformat() for e in events)
     days = []
-    for offset in range(182):
+    for offset in range(ACTIVITY_WEEKS * 7):
         date = (start_date + timedelta(days=offset)).isoformat()
         days.append({"date": date, "count": counts[date]})
     return {"start": start_date, "today": today, "days": days}
