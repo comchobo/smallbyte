@@ -461,6 +461,7 @@ export function LearningScreen({
       order={ordered}
       passed={dashboard?.passed}
       focus={target}
+      activeTaskId={dashboard?.active?.task_id}
       mini={mini}
       requiresLogin={!user}
     />

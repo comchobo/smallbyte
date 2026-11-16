@@ -77,7 +77,12 @@ export function TaskDocument({ task }: { task: Task }) {
         <p>아래 동작을 코드나 관찰 결과에 연결해 설명할 수 있으면 됩니다.</p>
         <ul className="completion-criteria">
           {task.requirements.map((requirement) => (
-            <li key={requirement}>{requirement}</li>
+            <li key={requirement}>
+              <span className="document-marker" aria-hidden="true">
+                <Icon name="check" />
+              </span>
+              <p>{requirement}</p>
+            </li>
           ))}
         </ul>
       </section>
@@ -113,7 +118,7 @@ export function TaskDocument({ task }: { task: Task }) {
         </details>
         <details className="read-task">
           <summary>대화에서 확인할 개념</summary>
-          <ul className="requirements">
+          <ul className="concept-reference">
             {task.rubric.map((item) => (
               <li key={item.id}>{item.title}</li>
             ))}
