@@ -28,6 +28,7 @@ export function CourseMap({
   const [leg, setLeg] = useState(false);
   const [hover, setHover] = useState<string | null>(null);
   const pattern = useId();
+  const byId = new Map(tasks.map((task) => [task.id, task]));
   const current = Math.max(0, order.indexOf(focus || ""));
   const [fx, fy] = points[current] || points[0];
   return (
@@ -80,7 +81,7 @@ export function CourseMap({
       <div className="course-map">
         <svg
           viewBox="0 0 860 420"
-          aria-label={`학습 코스. ${passed.length}개 완료. ${order.map((id) => tasks.find((t) => t.id === id)?.concept).join(", ")}`}
+          aria-label={`학습 코스. ${passed.length}개 완료. ${order.map((id) => byId.get(id)?.concept).join(", ")}`}
         >
           <title>웹 CS 학습 코스</title>
           <rect width="860" height="420" fill="#fff" />
@@ -174,7 +175,7 @@ export function CourseMap({
               />
             </g>
             {order.map((id, i) => {
-              const t = tasks.find((t) => t.id === id);
+              const t = byId.get(id);
               const [x, y] = points[i];
               const done = passed.includes(id);
               return (
@@ -272,37 +273,39 @@ export function CourseMap({
             </tr>
           </thead>
           <tbody>
-            {order.map((id, i) => (
-              <tr key={id} className={hover === id ? "linked" : ""}>
-                <td>{i + 1}</td>
-                <td>
-                  <a
-                    href={`#page=preview&task=${id}`}
-                    onMouseEnter={() => setHover(id)}
-                    onMouseLeave={() => setHover(null)}
-                    onFocus={() => setHover(id)}
-                    onBlur={() => setHover(null)}
-                  >
-                    <strong>{tasks.find((t) => t.id === id)?.title}</strong>
-                    <small>
-                      {tasks.find((t) => t.id === id)?.concept} ·{" "}
-                      {tasks.find((t) => t.id === id)?.minutes}분
-                    </small>
-                  </a>
-                </td>
-                <td>
-                  <span
-                    className={`control-status ${passed.includes(id) ? "done" : id === focus ? "current" : ""}`}
-                  >
-                    {passed.includes(id)
-                      ? "완료"
-                      : id === focus
-                        ? "현재"
-                        : "예정"}
-                  </span>
-                </td>
-              </tr>
-            ))}
+            {order.map((id, i) => {
+              const t = byId.get(id);
+              return (
+                <tr key={id} className={hover === id ? "linked" : ""}>
+                  <td>{i + 1}</td>
+                  <td>
+                    <a
+                      href={`#page=preview&task=${id}`}
+                      onMouseEnter={() => setHover(id)}
+                      onMouseLeave={() => setHover(null)}
+                      onFocus={() => setHover(id)}
+                      onBlur={() => setHover(null)}
+                    >
+                      <strong>{t?.title}</strong>
+                      <small>
+                        {t?.concept} · {t?.minutes}분
+                      </small>
+                    </a>
+                  </td>
+                  <td>
+                    <span
+                      className={`control-status ${passed.includes(id) ? "done" : id === focus ? "current" : ""}`}
+                    >
+                      {passed.includes(id)
+                        ? "완료"
+                        : id === focus
+                          ? "현재"
+                          : "예정"}
+                    </span>
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       )}
