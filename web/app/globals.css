@@ -1055,6 +1055,7 @@ progress::-moz-progress-bar {
 .document-section > p {
   color: var(--muted);
   line-height: 1.9;
+  margin-bottom: 14px;
 }
 .requirements {
   margin: 10px 0 0;
@@ -1068,14 +1069,18 @@ progress::-moz-progress-bar {
   padding: 0;
   margin: 0;
 }
-.experiment-steps li {
-  counter-increment: experiment;
+.experiment-steps li,
+.completion-criteria li,
+.submission-facts > div {
   display: grid;
   grid-template-columns: 28px minmax(0, 1fr);
   gap: 16px;
   padding: 18px 0;
   border-bottom: 1px solid var(--line);
   line-height: 1.85;
+}
+.experiment-steps li {
+  counter-increment: experiment;
 }
 .experiment-steps li::before {
   content: counter(experiment);
@@ -1091,28 +1096,45 @@ progress::-moz-progress-bar {
   color: var(--muted);
 }
 .completion-criteria {
-  padding-left: 20px;
-  display: grid;
-  gap: 12px;
-  line-height: 1.85;
+  list-style: none;
+  padding: 0;
+  margin: 0;
 }
-.completion-criteria li::marker {
-  color: var(--olive);
+.document-marker {
+  display: flex;
+  align-items: center;
+  align-self: start;
+  min-height: 28px;
+  color: var(--purple);
 }
-.submission-facts {
-  margin: 20px 0 0;
-  padding: 20px;
-  background: var(--tint);
-  display: grid;
-  gap: 16px;
-}
-.submission-facts dt {
-  font-size: 12px;
+.completion-criteria p {
   color: var(--muted);
 }
+.submission-facts {
+  margin: 0;
+  counter-reset: submission;
+}
+.submission-facts > div {
+  counter-increment: submission;
+}
+.submission-facts > div::before {
+  content: counter(submission);
+  grid-row: 1 / 3;
+  font-weight: 700;
+  color: var(--purple);
+  font-variant-numeric: tabular-nums;
+}
+.submission-facts > div {
+  row-gap: 6px;
+}
+.submission-facts dt {
+  font-size: 15px;
+  font-weight: 700;
+}
 .submission-facts dd {
-  margin: 4px 0 0;
-  font-size: 13px;
+  grid-column: 2;
+  margin: 0;
+  color: var(--muted);
 }
 .starter-note {
   white-space: pre-wrap;
@@ -1225,10 +1247,35 @@ summary {
 .task-resources .read-task {
   margin-top: 0;
   padding: 0;
+  border-top: 0;
+  border-bottom: 1px solid var(--line);
 }
 .task-resources summary {
-  display: list-item;
-  padding-block: 16px;
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr);
+  gap: 16px;
+  padding-block: 18px;
+  font-size: 15px;
+  line-height: 1.85;
+  list-style: none;
+}
+.task-resources summary::-webkit-details-marker {
+  display: none;
+}
+.task-resources summary::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  margin: 8px 0 0 2px;
+  border-right: 1.7px solid var(--purple);
+  border-bottom: 1.7px solid var(--purple);
+  transform: rotate(-45deg);
+}
+.task-resources details[open] > summary::before {
+  transform: rotate(45deg);
+}
+.task-resources .read-task > :not(summary) {
+  margin-left: 44px;
 }
 .task-resources details[open] {
   padding-bottom: 20px;
@@ -1966,17 +2013,26 @@ summary {
 .is-compact .diagram-note {
   display: none;
 }
-.hint-reference {
+.hint-reference,
+.concept-reference {
   margin: 0;
+}
+.concept-reference {
+  padding: 0;
+  list-style: none;
+}
+.hint-reference > div,
+.concept-reference > li {
+  padding: 12px 0;
+  border-top: 1px solid var(--line);
 }
 .hint-reference > div {
   display: grid;
   grid-template-columns: 128px minmax(0, 1fr);
   gap: 16px;
-  padding: 12px 0;
-  border-top: 1px solid var(--line);
 }
-.hint-reference > div:first-child {
+.hint-reference > div:first-child,
+.concept-reference > li:first-child {
   border-top: 0;
   padding-top: 4px;
 }
@@ -1985,7 +2041,8 @@ summary {
   font-weight: 700;
   line-height: 1.65;
 }
-.hint-reference dd {
+.hint-reference dd,
+.concept-reference > li {
   margin: 0;
   font-size: 13px;
   line-height: 1.65;
