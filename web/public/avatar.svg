@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 80 80" fill="none">
+  <title>smallbyte 기본 캐릭터 아바타</title>
+  <path d="M12 80V70c0-13 12-22 28-22s28 9 28 22v10" fill="#7b2f9e"/>
+  <path d="M29 56 40 67l11-11" fill="#f1e6f6"/>
+  <path d="M34 44h12v14c-4 4-8 4-12 0Z" fill="#e8b698"/>
+  <path d="M19 32c-1-19 9-27 22-27 16 0 24 12 21 29l-5 12H23Z" fill="#33372e"/>
+  <ellipse cx="22" cy="36" rx="4" ry="6" fill="#f0c8aa"/>
+  <ellipse cx="58" cy="36" rx="4" ry="6" fill="#f0c8aa"/>
+  <path d="M23 25c0-12 34-12 34 0v12c0 14-9 21-17 21s-17-7-17-21Z" fill="#f0c8aa"/>
+  <path d="M22 28c5-1 10-6 12-12 5 7 15 10 25 9-1-12-10-19-20-19-13 0-20 9-17 22Z" fill="#33372e"/>
+  <path d="M29 32h6m10 0h6" stroke="#655447" stroke-width="1.5" stroke-linecap="round"/>
+  <ellipse cx="32" cy="37" rx="1.7" ry="2" fill="#1b1d19"/>
+  <ellipse cx="48" cy="37" rx="1.7" ry="2" fill="#1b1d19"/>
+  <path d="m40 38-2 6h4" stroke="#cb987a" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M34 48c3 3 9 3 12 0" stroke="#8f5547" stroke-width="1.8" stroke-linecap="round"/>
+  <path d="M24 70v10m32-10v10" stroke="#60217d" stroke-width="2" stroke-linecap="round"/>
+</svg>

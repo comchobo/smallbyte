@@ -2,13 +2,17 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
+import { ActivityPanel } from "@/components/activity-panel";
 import { Source, Transcript } from "@/components/attempt-panels";
+import { Avatar } from "@/components/avatar";
+import { ConceptDiagram } from "@/components/concept-diagram";
 import { CourseMap } from "@/components/course-map";
-import { GitHubIcon, UserIcon } from "@/components/icons";
+import { Icon } from "@/components/icons";
+import { LandingSections } from "@/components/landing-sections";
+import { Logo } from "@/components/logo";
 import { Meta, TaskDocument } from "@/components/task-document";
 import {
-  type Activity,
   ApiError,
   type Attempt,
   api,
@@ -39,14 +43,119 @@ const titles: Record<Page, string> = {
   mypage: "마이페이지",
 };
 
+function AccountMenu({
+  user,
+  busy,
+  onLogout,
+}: {
+  user: User;
+  busy: boolean;
+  onLogout: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const container = useRef<HTMLFieldSetElement>(null);
+  const trigger = useRef<HTMLButtonElement>(null);
+  const id = useId();
+  useEffect(() => {
+    if (!open) return;
+    const dismiss = (event: PointerEvent) => {
+      if (
+        event.target instanceof Node &&
+        !container.current?.contains(event.target)
+      )
+        setOpen(false);
+    };
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        trigger.current?.focus();
+        setOpen(false);
+      }
+    };
+    document.addEventListener("pointerdown", dismiss);
+    document.addEventListener("keydown", handleEscape);
+    return () => {
+      document.removeEventListener("pointerdown", dismiss);
+      document.removeEventListener("keydown", handleEscape);
+    };
+  }, [open]);
+  return (
+    <fieldset
+      className="account-menu"
+      aria-label="계정"
+      ref={container}
+      onPointerEnter={(event) => {
+        if (event.pointerType === "mouse") setOpen(true);
+      }}
+      onPointerLeave={(event) => {
+        if (
+          event.pointerType === "mouse" &&
+          !container.current?.contains(document.activeElement)
+        )
+          setOpen(false);
+      }}
+      onFocus={(event) => {
+        if (event.target.matches(":focus-visible")) setOpen(true);
+      }}
+      onBlur={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget)) setOpen(false);
+      }}
+    >
+      <button
+        className="avatar-link"
+        type="button"
+        ref={trigger}
+        aria-label={`${user.name}님의 계정 메뉴`}
+        aria-expanded={open}
+        aria-controls={id}
+        onClick={() => setOpen((value) => !value)}
+      >
+        <Avatar seed={user.id} />
+      </button>
+      <div className="account-popover" id={id} hidden={!open}>
+        <div className="account-identity">
+          <strong>{user.name}</strong>
+          <span>@{user.handle}</span>
+        </div>
+        <nav aria-label="계정 메뉴">
+          <Link href="/mypage" onClick={() => setOpen(false)}>
+            마이페이지
+          </Link>
+          <button type="button" disabled={busy} onClick={onLogout}>
+            {busy ? "처리 중…" : "로그아웃"}
+          </button>
+        </nav>
+      </div>
+    </fieldset>
+  );
+}
+function validateRepository(value: string): string {
+  const candidate = value
+    .trim()
+    .replace(/\/$/, "")
+    .replace(/\.git$/, "");
+  if (!candidate) return "GitHub 저장소 URL을 입력해 주세요.";
+  const separator = candidate.indexOf("://");
+  const match = candidate
+    .slice(separator + 3)
+    .match(/^github\.com\/([A-Za-z0-9_-]+)\/([A-Za-z0-9_.-]+)$/);
+  if (
+    candidate.length > 300 ||
+    candidate.slice(0, separator).toLowerCase() !== "https" ||
+    !match ||
+    [".", ".."].includes(match[2])
+  ) {
+    return "https://github.com/소유자/저장소 형식으로 입력해 주세요.";
+  }
+  return "";
+}
+
 export function LearningScreen({
   route,
   authFailed = false,
-  sessionExpired = false,
 }: {
   route: LearningRoute;
   authFailed?: boolean;
-  sessionExpired?: boolean;
 }) {
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
@@ -58,6 +167,9 @@ export function LearningScreen({
   const [notice, setNotice] = useState("");
   const [attempt, setAttempt] = useState<Attempt | null>(null);
   const [repo, setRepo] = useState("");
+  const [repoError, setRepoError] = useState("");
+  const [repoTouched, setRepoTouched] = useState(false);
+  const repoInput = useRef<HTMLInputElement>(null);
   const [answer, setAnswer] = useState("");
   const [step, setStep] = useState(0);
   const [preferences, setPreferences] = useState<Preferences>({
@@ -66,11 +178,11 @@ export function LearningScreen({
     experience: "",
   });
   const [records, setRecords] = useState<History | null>(null);
-  const [activity, setActivity] = useState<Activity | null>(null);
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState("");
   const [historyPage, setHistoryPage] = useState(1);
   const main = useRef<HTMLElement>(null);
+  const loginDialog = useRef<HTMLDialogElement>(null);
   const requestKey = useRef<string | null>(null);
   const actionLock = useRef(false);
   const routeGeneration = useRef(0);
@@ -91,7 +203,7 @@ export function LearningScreen({
         setNotice(
           "로그인 유효기간이 만료되었습니다. GitHub로 다시 로그인해 주세요.",
         );
-        router.replace("/login?reason=expired");
+        router.replace(pageHref("landing"));
       } else
         setError(
           e instanceof Error
@@ -140,22 +252,36 @@ export function LearningScreen({
     : !user
       ? ["landing", "login"].includes(route.page)
         ? route.page
-        : "login"
-      : !user.onboarding_complete
-        ? "onboarding"
-        : ["landing", "login", "onboarding"].includes(route.page)
-          ? "home"
-          : route.page;
+        : "landing"
+      : route.page === "landing"
+        ? "landing"
+        : !user.onboarding_complete && route.page !== "mypage"
+          ? "onboarding"
+          : ["login", "onboarding"].includes(route.page)
+            ? "home"
+            : route.page;
   useEffect(() => {
     document.title = `${titles[page] || "학습"} · smallbyte`;
   }, [page]);
   useEffect(() => {
     if (!loading && page !== route.page) router.replace(pageHref(page));
   }, [loading, page, route.page, router]);
+  useEffect(() => {
+    const dialog = loginDialog.current;
+    if (!dialog) return;
+    if (!loading && page === "login" && !dialog.open) dialog.showModal();
+    if ((loading || page !== "login") && dialog.open) dialog.close();
+  }, [loading, page]);
+  const closeLogin = useCallback(() => {
+    loginDialog.current?.close();
+    router.replace(pageHref("landing"));
+  }, [router]);
 
   useEffect(() => {
     const generation = ++routeGeneration.current;
     setAttempt(null);
+    setRepoError("");
+    setRepoTouched(false);
     if (loading || !user || !["task", "assessment", "result"].includes(page))
       return;
     const id = page === "result" ? route.record : dashboard?.active?.id;
@@ -220,14 +346,10 @@ export function LearningScreen({
         page: String(historyPage),
         ...(filter ? { outcome: filter } : {}),
       });
-      Promise.all([
-        api<History>(`/history?${params}`),
-        api<Activity>("/activity"),
-      ])
-        .then(([h, a]) => {
+      api<History>(`/history?${params}`)
+        .then((h) => {
           if (!stopped) {
             setRecords(h);
-            setActivity(a);
           }
         })
         .catch(handleError);
@@ -238,16 +360,6 @@ export function LearningScreen({
     };
   }, [page, user, query, filter, historyPage, handleError]);
 
-  const forgetSentAnswer = useCallback((a: Attempt) => {
-    if (
-      a.messages.some(
-        (m) => m.role === "user" && m.request_key === requestKey.current,
-      )
-    ) {
-      setAnswer("");
-      requestKey.current = null;
-    }
-  }, []);
   async function action(work: () => Promise<void>) {
     if (actionLock.current) return;
     actionLock.current = true;
@@ -272,6 +384,17 @@ export function LearningScreen({
       go(a.status === "chatting" ? "assessment" : "task");
     });
   }
+  const forgetSentAnswer = useCallback((a: Attempt) => {
+    if (
+      a.messages.some(
+        (m) => m.role === "user" && m.request_key === requestKey.current,
+      )
+    ) {
+      setAnswer("");
+      requestKey.current = null;
+    }
+  }, []);
+
   async function assess(path: string, data?: unknown) {
     await action(async () => {
       try {
@@ -304,14 +427,34 @@ export function LearningScreen({
       setNotice("변경 내용을 저장했습니다.");
     });
   }
+  async function logout() {
+    await action(async () => {
+      await api("/auth/logout", "POST");
+      setUser(null);
+      setDashboard(null);
+      setAttempt(null);
+      setAnswer("");
+      router.replace("/");
+    });
+  }
   const ordered = dashboard?.order || ["dns", "http", "cache", "session"];
   const selected = tasks.find((t) => t.id === route.task);
-  const focus = dashboard?.recommended || ordered[0];
-  const featured = tasks.find((t) => t.id === focus);
+  const focus = dashboard ? dashboard.recommended : ordered[0];
+  const featured = tasks.find((t) => t.id === (focus || ordered[0]));
+  const nextTask = ordered
+    .filter((id) => id !== focus && !dashboard?.passed.includes(id))
+    .map((id) => tasks.find((task) => task.id === id))
+    .find((task) => task !== undefined);
   const pending = attempt?.operation?.status === "running";
   const failed = attempt?.operation?.status === "failed";
   const ready = Boolean(user?.onboarding_complete);
   const preferenceStep = preferenceKeys[step];
+  const entryHref = user ? (ready ? "/home" : "/onboarding") : "/login";
+  const entryLabel = user
+    ? ready
+      ? "이어서 학습하기"
+      : "학습 설정 이어하기"
+    : "GitHub로 시작하기";
   const map = (mini = false, target = focus) => (
     <CourseMap
       tasks={tasks}
@@ -319,6 +462,7 @@ export function LearningScreen({
       passed={dashboard?.passed}
       focus={target}
       mini={mini}
+      requiresLogin={!user}
     />
   );
   const resume = () =>
@@ -358,15 +502,15 @@ export function LearningScreen({
       </button>
       <header className="header">
         <div className="header-inner">
-          <Link className="brand" href={user ? "/home" : "/"}>
-            smallbyte<span>.</span>
+          <Link className="brand" href="/" aria-label="smallbyte 홈">
+            <Logo />
           </Link>
           {ready && (
             <nav className="nav" aria-label="주요 메뉴">
               <Link
                 href="/home"
                 aria-current={
-                  !["history", "result", "mypage"].includes(page)
+                  ["home", "preview", "task", "assessment"].includes(page)
                     ? "page"
                     : undefined
                 }
@@ -384,16 +528,12 @@ export function LearningScreen({
             </nav>
           )}
           <div className="header-right">
-            {ready ? (
-              <Link
-                className="avatar-link"
-                href="/mypage"
-                aria-label={`${user?.name}님의 마이페이지`}
-              >
-                <UserIcon />
-              </Link>
-            ) : user ? (
-              <span className="small muted">GitHub 연결됨</span>
+            {user ? (
+              <AccountMenu
+                user={user}
+                busy={busy}
+                onLogout={() => void logout()}
+              />
             ) : page !== "login" ? (
               <Link href="/login">로그인</Link>
             ) : null}
@@ -407,13 +547,17 @@ export function LearningScreen({
         ref={main}
         aria-busy={loading}
       >
-        {(notice || sessionExpired) && (
-          <p className="notice" role="status">
-            {notice ||
-              "로그인 유효기간이 만료되었습니다. GitHub로 다시 로그인해 주세요."}
+        {authFailed && page !== "login" && (
+          <p className="error" role="alert">
+            GitHub 로그인을 완료하지 못했습니다. 다시 시도해 주세요.
           </p>
         )}
-        {errorUI}
+        {notice && (
+          <p className="notice" role="status">
+            {notice}
+          </p>
+        )}
+        {tasks.length > 0 && errorUI}
         {loading ? (
           <div className="empty" role="status">
             <h1>학습 정보를 불러오는 중…</h1>
@@ -421,6 +565,11 @@ export function LearningScreen({
         ) : tasks.length === 0 ? (
           <div className="empty">
             <h1>학습 정보를 불러오지 못했습니다.</h1>
+            {error && (
+              <p className="error" role="alert">
+                {error}
+              </p>
+            )}
             <button
               className="primary"
               type="button"
@@ -431,68 +580,57 @@ export function LearningScreen({
           </div>
         ) : (
           <>
-            {page === "landing" && (
-              <div className="entry">
-                <section className="entry-copy">
-                  <h1>
-                    개념을 지형으로,
-                    <br />
-                    <em>배움을 코스로.</em>
-                  </h1>
-                  <p>
-                    CS와 웹의 원리를 작은 실험으로 익힙니다. 나에게 맞는 코스를
-                    따라가고, 작업물에 대한 대화로 이해를 확인하세요.
-                  </p>
-                  <Link className="primary" href="/login">
-                    <GitHubIcon />
-                    GitHub로 시작하기
-                  </Link>
-                </section>
-                <section className="entry-example" aria-label="학습 코스 예시">
-                  <div className="example-head">
-                    <span>예시 코스 · 4개 컨트롤</span>
-                  </div>
-                  {map(true, "cache")}
-                  <div className="example-body">
-                    <h2>{tasks.find((t) => t.id === "cache")?.title}</h2>
-                    <p>{tasks.find((t) => t.id === "cache")?.description}</p>
-                    <div className="example-code">
-                      <pre>
-                        GET /message HTTP/1.1{"\n"}If-None-Match: "version-1"
-                        {"\n\n"}HTTP/1.1 304 Not Modified
-                      </pre>
-                    </div>
-                  </div>
-                </section>
-              </div>
-            )}
-            {page === "login" && (
-              <div className="auth-layout">
-                <section className="auth-info">
-                  <Link className="link-button" href="/">
-                    서비스 소개로
-                  </Link>
-                  <h1>smallbyte에 로그인</h1>
-                  <p>
-                    처음 로그인하면 학습 목적과 경험에 맞춰 코스를 설정합니다.
-                  </p>
-                </section>
-                <section className="auth-panel" aria-label="GitHub 로그인">
-                  {authFailed && (
-                    <p className="error" role="alert">
-                      GitHub 로그인을 완료하지 못했습니다. 다시 시도해 주세요.
+            {(page === "landing" || page === "login") && (
+              <>
+                <div className="entry">
+                  <section className="entry-copy">
+                    <h1>
+                      개념을 지형으로,
+                      <br />
+                      <em>배움을 코스로.</em>
+                    </h1>
+                    <p>
+                      CS와 웹의 원리를 작은 실험으로 익힙니다. 나에게 맞는
+                      코스를 따라가고, 작업물에 대한 대화로 이해를 확인하세요.
                     </p>
-                  )}
-                  <a className="primary" href="/api/auth/github">
-                    <GitHubIcon />
-                    GitHub로 로그인
-                  </a>
-                  <p className="notice">
-                    제출은 공개 저장소만 지원합니다. 저장소 쓰기 권한은 요청하지
-                    않습니다.
-                  </p>
-                </section>
-              </div>
+                    <Link className="primary" href={entryHref}>
+                      {user ? <Icon name="arrow" /> : <Icon name="github" />}
+                      {entryLabel}
+                    </Link>
+                  </section>
+                  <section
+                    className="entry-example"
+                    aria-label="학습 코스 예시"
+                  >
+                    <div className="example-head">
+                      <span>예시 코스 · 4개 과제</span>
+                    </div>
+                    <CourseMap
+                      tasks={tasks}
+                      order={["dns", "http", "cache", "session"]}
+                      focus="cache"
+                      mini
+                      requiresLogin={!user}
+                    />
+                    <div className="example-body">
+                      <h2>{tasks.find((t) => t.id === "cache")?.title}</h2>
+                      <p>{tasks.find((t) => t.id === "cache")?.description}</p>
+                      <div className="example-code">
+                        <pre>
+                          GET /message HTTP/1.1{"\n"}If-None-Match: "version-1"
+                          {"\n\n"}HTTP/1.1 304 Not Modified
+                        </pre>
+                      </div>
+                    </div>
+                  </section>
+                </div>
+                <LandingSections
+                  tasks={tasks}
+                  startHref={entryHref}
+                  startLabel={entryLabel}
+                  signedIn={!!user}
+                />
+              </>
             )}
             {page === "onboarding" && (
               <div className="onboarding">
@@ -583,13 +721,13 @@ export function LearningScreen({
               <>
                 <header className="page-title">
                   <div>
-                    <h1>나의 학습</h1>
+                    <h1 className="home-title">나의 학습</h1>
                   </div>
                 </header>
                 {dashboard.passed.length === tasks.length &&
                   !dashboard.active && (
                     <section className="all-complete">
-                      <h2>모든 컨트롤을 완료했습니다.</h2>
+                      <h2>모든 과제를 완료했습니다.</h2>
                       <p>
                         기록에서 피드백을 다시 보거나 과제를 다시 수행할 수
                         있습니다.
@@ -602,98 +740,116 @@ export function LearningScreen({
                 <div className="learning-grid">
                   <div>
                     {map()}
-                    <article className="feature">
-                      <div className="feature-body">
-                        <div className="feature-head">
-                          <h2>{featured.title}</h2>
-                          <span className="tag">
-                            {dashboard.active ? "진행 중" : "추천 컨트롤"}
-                          </span>
-                        </div>
-                        <Meta task={featured} />
-                        <p className="feature-description">
-                          {featured.description}
-                        </p>
-                        <div className="feature-preview">
-                          <div>
-                            <h3>직접 해 볼 일</h3>
-                            <p>{featured.requirements[0]}</p>
+                    {(dashboard.active ||
+                      dashboard.passed.length < tasks.length) && (
+                      <article className="feature">
+                        <div className="feature-body">
+                          <div className="feature-head">
+                            <h2>{featured.title}</h2>
+                            <span className="tag">
+                              {dashboard.active
+                                ? "진행 중"
+                                : "다음으로 배울 과제"}
+                            </span>
                           </div>
-                          <div>
-                            <h3>학습 후 설명할 수 있는 것</h3>
-                            <p>{featured.rubric[0]?.title}</p>
-                          </div>
+                          <Meta task={featured} />
+                          <p className="feature-description">
+                            {featured.description}
+                          </p>
+                          <ConceptDiagram taskId={featured.id} compact />
+                          <p className="feature-reason">{dashboard.reason}</p>
                         </div>
-                        <p className="feature-reason">{dashboard.reason}</p>
-                      </div>
-                      <div className="feature-bottom">
-                        <button
-                          className="primary"
-                          type="button"
-                          onClick={() =>
-                            dashboard.active
-                              ? resume()
-                              : go("preview", featured.id)
-                          }
-                        >
-                          {dashboard.active
-                            ? "이어서 학습하기"
-                            : "과제 살펴보기"}
-                        </button>
-                      </div>
-                    </article>
-                    <div className="section-head">
-                      <h2>다른 컨트롤</h2>
-                    </div>
-                    <div className="task-list">
-                      {ordered
-                        .filter((id) => id !== featured.id)
-                        .map((id) => {
-                          const t = tasks.find((t) => t.id === id);
-                          return (
-                            t && (
-                              <Link
-                                className="task-row"
-                                href={pageHref("preview", id)}
-                                key={id}
-                              >
-                                <span className="order">
-                                  {ordered.indexOf(id) + 1}
-                                </span>
-                                <span>
-                                  <strong>{t.title}</strong>
-                                  <small>
-                                    {t.concept} · {t.minutes}분
-                                  </small>
-                                </span>
-                                <span className="tag olive">
-                                  {dashboard.passed.includes(id)
-                                    ? "완료"
-                                    : "살펴보기"}
-                                </span>
-                              </Link>
-                            )
-                          );
-                        })}
-                    </div>
+                        <div className="feature-bottom">
+                          <button
+                            className="primary"
+                            type="button"
+                            onClick={() =>
+                              dashboard.active
+                                ? resume()
+                                : go("preview", featured.id)
+                            }
+                          >
+                            {dashboard.active
+                              ? "이어서 학습하기"
+                              : "과제 살펴보기"}
+                          </button>
+                        </div>
+                      </article>
+                    )}
                   </div>
                   <aside className="profile-summary">
-                    <h2>{user?.name}님의 코스</h2>
-                    <p>{preferenceLabel("purpose", user?.purpose || "")}</p>
-                    <p>{preferenceLabel("goal", user?.goal || "")}</p>
-                    <p>
-                      {preferenceLabel("experience", user?.experience || "")}
-                    </p>
-                    <div className="course-progress">
+                    <h2 className="icon-heading">
+                      <Icon name="activity" />
+                      학습 현황
+                    </h2>
+                    <p className="summary-owner">{user?.name}님의 코스</p>
+                    <div className="summary-progress">
+                      <p>
+                        <strong>{dashboard.passed.length}</strong> /{" "}
+                        {tasks.length}개 과제 완료
+                      </p>
                       <progress
                         aria-label="코스 완료 과제 수"
                         value={dashboard.passed.length}
                         max={tasks.length}
                       />
-                      <p>
-                        {dashboard.passed.length} / {tasks.length} 컨트롤 완료
-                      </p>
                     </div>
+                    <dl className="summary-next">
+                      <div>
+                        <dt>
+                          {dashboard.active
+                            ? "이어서 학습할 과제"
+                            : dashboard.passed.length === tasks.length
+                              ? "코스 완료"
+                              : "지금 시작할 과제"}
+                        </dt>
+                        <dd>
+                          {dashboard.active ||
+                          dashboard.passed.length < tasks.length ? (
+                            <Link
+                              href={
+                                dashboard.active
+                                  ? pageHref(
+                                      dashboard.active.status === "chatting"
+                                        ? "assessment"
+                                        : "task",
+                                    )
+                                  : pageHref("preview", featured.id)
+                              }
+                            >
+                              {featured.concept}
+                              <span aria-hidden="true"> →</span>
+                            </Link>
+                          ) : (
+                            <Link href="/history">학습 기록 보기 →</Link>
+                          )}
+                        </dd>
+                      </div>
+                      {nextTask && (
+                        <div>
+                          <dt>그다음 과제</dt>
+                          <dd>
+                            <Link href={pageHref("preview", nextTask.id)}>
+                              {nextTask.concept}
+                            </Link>
+                          </dd>
+                        </div>
+                      )}
+                    </dl>
+                    <section className="summary-preferences">
+                      <h3 className="icon-heading">
+                        <Icon name="settings" />
+                        나의 학습 설정
+                      </h3>
+                      <dl>
+                        {preferenceKeys.map((key) => (
+                          <div key={key}>
+                            <dt>{preferenceLabels[key]}</dt>
+                            <dd>{preferenceLabel(key, user?.[key] || "")}</dd>
+                          </div>
+                        ))}
+                      </dl>
+                    </section>
                     <Link className="link-button" href="/mypage">
                       학습 방향 바꾸기
                     </Link>
@@ -710,11 +866,10 @@ export function LearningScreen({
                   <div className="task-layout">
                     <TaskDocument task={selected} />
                     <aside className="preview-side">
-                      {map(true, selected.id)}
                       <h2>
                         {dashboard?.active
                           ? "과제 미리보기"
-                          : "이 컨트롤 시작하기"}
+                          : "이 과제 시작하기"}
                       </h2>
                       <p>
                         지정 브랜치 <code>{selected.branch}</code>
@@ -744,6 +899,7 @@ export function LearningScreen({
                           {busy ? "시작 중…" : "과제 시작하기"}
                         </button>
                       )}
+                      {map(true)}
                     </aside>
                   </div>
                 </>
@@ -766,14 +922,25 @@ export function LearningScreen({
                   <aside>
                     <form
                       className="task-submission"
+                      noValidate
                       onSubmit={(e) => {
                         e.preventDefault();
+                        const message = validateRepository(repo);
+                        setRepoTouched(true);
+                        setRepoError(message);
+                        if (message) {
+                          repoInput.current?.focus();
+                          return;
+                        }
                         void assess(`/attempts/${attempt.id}/submission`, {
                           repo,
                         });
                       }}
                     >
-                      <h2>작업물 제출</h2>
+                      <h2 className="icon-heading">
+                        <Icon name="file" />
+                        작업물 제출
+                      </h2>
                       <p>
                         지정 브랜치에서 작업한 뒤 공개 GitHub 저장소 주소를
                         제출하세요.
@@ -801,15 +968,34 @@ export function LearningScreen({
                       </label>
                       <input
                         id="repo"
+                        ref={repoInput}
                         type="url"
                         value={repo}
-                        onChange={(e) => setRepo(e.target.value)}
+                        onChange={(e) => {
+                          setRepo(e.target.value);
+                          if (repoTouched)
+                            setRepoError(validateRepository(e.target.value));
+                        }}
+                        onBlur={() => {
+                          setRepoTouched(true);
+                          setRepoError(validateRepository(repo));
+                        }}
+                        aria-invalid={!!repoError}
+                        aria-describedby={
+                          repoError ? "repo-hint repo-error" : "repo-hint"
+                        }
                         required
                         maxLength={300}
                         placeholder="https://github.com/name/cs-lab"
                         disabled={busy || pending || attempt.files.length > 0}
                       />
-                      <p className="notice">
+                      {repoError && (
+                        <p id="repo-error" className="field-error" role="alert">
+                          <Icon name="alert" />
+                          <span>{repoError}</span>
+                        </p>
+                      )}
+                      <p id="repo-hint" className="notice">
                         지정 브랜치에 작업물을 push하세요. 평가 시작 시 파일을
                         읽으며 대화 중 변경 내용은 반영하지 않습니다.
                       </p>
@@ -1048,7 +1234,7 @@ export function LearningScreen({
                       </details>
                     </article>
                     <aside className="result-side">
-                      {map(true, attempt.task_id)}
+                      {map(true)}
                       <Source attempt={attempt} />
                       <details className="read-task">
                         <summary>당시 과제 안내 다시 보기</summary>
@@ -1080,36 +1266,7 @@ export function LearningScreen({
                 </header>
                 <div className="history-grid">
                   <div>
-                    <section className="activity">
-                      <div className="section-head">
-                        <h2>학습 활동</h2>
-                        <span>최근 26주 · 한국 시간</span>
-                      </div>
-                      <div
-                        className="heatmap"
-                        role="img"
-                        aria-label="최근 26주 학습 활동. 색이 짙을수록 활동이 많습니다."
-                      >
-                        {activity?.days.map((day) => (
-                          <span
-                            key={day.date}
-                            className={`heat-cell ${day.date > (activity?.today || "") ? "future" : ""}`}
-                            data-level={Math.min(3, day.count)}
-                            title={`${day.date} · 활동 ${day.count}회`}
-                          />
-                        ))}
-                      </div>
-                      {activity && (
-                        <div className="heat-labels">
-                          <span>{activity.start}부터</span>
-                          <span>{activity.today} 오늘까지</span>
-                        </div>
-                      )}
-                      <p className="notice">
-                        과제 시작·제출·AI 응답·평가 완료를 기록합니다. 색이
-                        짙을수록 활동이 많습니다.
-                      </p>
-                    </section>
+                    <ActivityPanel onError={handleError} />
                     <div className="section-head">
                       <h2>완료한 평가</h2>
                       <span>{records?.total || 0}건</span>
@@ -1238,7 +1395,7 @@ export function LearningScreen({
                 <div className="profile-layout">
                   <aside className="profile-account">
                     <span className="identity-avatar">
-                      <UserIcon />
+                      <Avatar seed={user.id} />
                     </span>
                     <h2>{user.name}</h2>
                     <p>@{user.handle} · GitHub 계정</p>
@@ -1249,7 +1406,7 @@ export function LearningScreen({
                         max={tasks.length}
                       />
                       <p>
-                        {dashboard?.passed.length || 0} / {tasks.length} 컨트롤
+                        {dashboard?.passed.length || 0} / {tasks.length} 과제
                         완료
                       </p>
                     </div>
@@ -1257,140 +1414,143 @@ export function LearningScreen({
                       나의 학습 기록 보기
                     </Link>
                   </aside>
-                  <div className="profile-sections">
-                    <section className="profile-section">
-                      <h2>계정 정보</h2>
-                      <form
-                        className="profile-form"
-                        onSubmit={(e) => {
-                          e.preventDefault();
-                          void saveProfile({
-                            name: new FormData(e.currentTarget).get("name"),
-                          });
-                        }}
-                      >
-                        <label htmlFor="display-name">
-                          표시 이름
-                          <input
-                            key={user.name}
-                            id="display-name"
-                            name="name"
-                            defaultValue={user.name}
-                            required
-                            maxLength={30}
-                            autoComplete="nickname"
-                          />
-                        </label>
-                        <button
-                          className="primary"
-                          disabled={busy}
-                          type="submit"
+                  <div className="profile-main">
+                    <ActivityPanel onError={handleError} />
+                    <div className="profile-sections">
+                      <section className="profile-section">
+                        <h2 className="icon-heading">
+                          <Icon name="user" />
+                          계정 정보
+                        </h2>
+                        <form
+                          className="profile-form"
+                          onSubmit={(e) => {
+                            e.preventDefault();
+                            void saveProfile({
+                              name: new FormData(e.currentTarget).get("name"),
+                            });
+                          }}
                         >
-                          이름 저장
-                        </button>
-                      </form>
-                    </section>
-                    <section className="profile-section">
-                      <h2>학습 방향</h2>
-                      <p>
-                        추천에 반영합니다. 진행 중인 과제는 그대로 유지됩니다.
-                      </p>
-                      <form
-                        className="profile-form"
-                        onSubmit={(e) => {
-                          e.preventDefault();
-                          const form = new FormData(e.currentTarget);
-                          void saveProfile(Object.fromEntries(form));
-                        }}
-                      >
-                        {preferenceKeys.map((key) => (
-                          <label key={key} htmlFor={`profile-${key}`}>
-                            {preferenceLabels[key]}
-                            <select
-                              key={user[key]}
-                              id={`profile-${key}`}
-                              name={key}
-                              defaultValue={user[key]}
-                            >
-                              {choices[key].map(([value, title]) => (
-                                <option key={value} value={value}>
-                                  {title}
-                                </option>
-                              ))}
-                            </select>
+                          <label htmlFor="display-name">
+                            표시 이름
+                            <input
+                              key={user.name}
+                              id="display-name"
+                              name="name"
+                              defaultValue={user.name}
+                              required
+                              maxLength={30}
+                              autoComplete="nickname"
+                            />
                           </label>
-                        ))}
-                        <button
-                          className="primary"
-                          disabled={busy}
-                          type="submit"
-                        >
-                          학습 방향 저장
-                        </button>
-                      </form>
-                    </section>
-                    <section className="profile-section">
-                      <h2>기본 제출 저장소</h2>
-                      <p>
-                        새 과제를 시작할 때 자동 입력됩니다. 과제마다 다른
-                        주소를 제출할 수도 있습니다.
-                      </p>
-                      <form
-                        className="profile-form"
-                        onSubmit={(e) => {
-                          e.preventDefault();
-                          void saveProfile({
-                            default_repo: new FormData(e.currentTarget).get(
-                              "repo",
-                            ),
-                          });
-                        }}
-                      >
-                        <label htmlFor="default-repo">
-                          공개 GitHub 저장소 URL
-                          <input
-                            key={user.default_repo}
-                            id="default-repo"
-                            type="url"
-                            name="repo"
-                            maxLength={300}
-                            defaultValue={user.default_repo}
-                            placeholder="https://github.com/name/cs-lab"
-                          />
-                        </label>
-                        <p className="notice">
-                          비워서 저장하면 기본 저장소를 해제합니다.
+                          <button
+                            className="primary"
+                            disabled={busy}
+                            type="submit"
+                          >
+                            이름 저장
+                          </button>
+                        </form>
+                      </section>
+                      <section className="profile-section">
+                        <h2 className="icon-heading">
+                          <Icon name="settings" />
+                          학습 방향
+                        </h2>
+                        <p>
+                          추천에 반영합니다. 진행 중인 과제는 그대로 유지됩니다.
                         </p>
-                        <button
-                          className="primary"
-                          disabled={busy}
-                          type="submit"
+                        <form
+                          className="profile-form"
+                          onSubmit={(e) => {
+                            e.preventDefault();
+                            const form = new FormData(e.currentTarget);
+                            void saveProfile(Object.fromEntries(form));
+                          }}
                         >
-                          기본 저장소 저장
+                          {preferenceKeys.map((key) => (
+                            <label key={key} htmlFor={`profile-${key}`}>
+                              {preferenceLabels[key]}
+                              <select
+                                key={user[key]}
+                                id={`profile-${key}`}
+                                name={key}
+                                defaultValue={user[key]}
+                              >
+                                {choices[key].map(([value, title]) => (
+                                  <option key={value} value={value}>
+                                    {title}
+                                  </option>
+                                ))}
+                              </select>
+                            </label>
+                          ))}
+                          <button
+                            className="primary"
+                            disabled={busy}
+                            type="submit"
+                          >
+                            학습 방향 저장
+                          </button>
+                        </form>
+                      </section>
+                      <section className="profile-section">
+                        <h2 className="icon-heading">
+                          <Icon name="link" />
+                          기본 제출 저장소
+                        </h2>
+                        <p>
+                          새 과제를 시작할 때 자동 입력됩니다. 과제마다 다른
+                          주소를 제출할 수도 있습니다.
+                        </p>
+                        <form
+                          className="profile-form"
+                          onSubmit={(e) => {
+                            e.preventDefault();
+                            void saveProfile({
+                              default_repo: new FormData(e.currentTarget).get(
+                                "repo",
+                              ),
+                            });
+                          }}
+                        >
+                          <label htmlFor="default-repo">
+                            공개 GitHub 저장소 URL
+                            <input
+                              key={user.default_repo}
+                              id="default-repo"
+                              type="url"
+                              name="repo"
+                              maxLength={300}
+                              defaultValue={user.default_repo}
+                              placeholder="https://github.com/name/cs-lab"
+                            />
+                          </label>
+                          <p className="notice">
+                            비워서 저장하면 기본 저장소를 해제합니다.
+                          </p>
+                          <button
+                            className="primary"
+                            disabled={busy}
+                            type="submit"
+                          >
+                            기본 저장소 저장
+                          </button>
+                        </form>
+                      </section>
+                      <section className="profile-section">
+                        <h2>로그아웃</h2>
+                        <p>학습 기록은 계정에 보관됩니다.</p>
+                        <button
+                          className="secondary"
+                          disabled={busy}
+                          type="button"
+                          onClick={() => void logout()}
+                        >
+                          로그아웃
                         </button>
-                      </form>
-                    </section>
-                    <section className="profile-section">
-                      <h2>로그아웃</h2>
-                      <p>학습 기록은 계정에 보관됩니다.</p>
-                      <button
-                        className="secondary"
-                        disabled={busy}
-                        type="button"
-                        onClick={() =>
-                          void action(async () => {
-                            await api("/auth/logout", "POST");
-                            setUser(null);
-                            setDashboard(null);
-                            setAttempt(null);
-                            setAnswer("");
-                            router.replace("/");
-                          })
-                        }
-                      >
-                        로그아웃
-                      </button>
-                    </section>
+                      </section>
+                    </div>
                   </div>
                 </div>
               </>
@@ -1398,6 +1558,43 @@ export function LearningScreen({
           </>
         )}
       </main>
+      <dialog
+        className="login-dialog"
+        ref={loginDialog}
+        aria-labelledby="login-dialog-title"
+        onCancel={(e) => {
+          e.preventDefault();
+          closeLogin();
+        }}
+      >
+        <div className="login-dialog-body">
+          <h2 id="login-dialog-title" aria-label="smallbyte에 로그인">
+            <Logo />
+          </h2>
+          <div className="login-connection" aria-hidden="true">
+            <span className="login-provider-brand">
+              <Logo />
+            </span>
+            <i />
+            <span>
+              <Icon name="github" />
+            </span>
+          </div>
+          <p className="login-prompt">GitHub 계정으로 시작하세요.</p>
+          <a className="primary" href="/api/auth/github">
+            <Icon name="github" />
+            GitHub로 로그인
+          </a>
+          <button
+            className="login-dialog-close"
+            type="button"
+            aria-label="로그인 창 닫기"
+            onClick={closeLogin}
+          >
+            <Icon name="close" />
+          </button>
+        </div>
+      </dialog>
     </>
   );
 }

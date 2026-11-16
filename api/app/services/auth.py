@@ -76,7 +76,7 @@ async def begin(db: AsyncSession) -> RedirectResponse:
 
 async def callback(request: Request, db: AsyncSession) -> RedirectResponse:
     settings = get_settings()
-    response = RedirectResponse(settings.app_origin + "/login?auth=failed", 303)
+    response = RedirectResponse(settings.app_origin + "/?auth=failed", 303)
     response.delete_cookie(STATE_COOKIE, path="/api/auth")
     state = request.query_params.get("state", "")
     # Lock the one-time state so simultaneous callbacks cannot consume it twice.

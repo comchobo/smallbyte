@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="680" height="300" viewBox="0 0 680 300" fill="none">
+  <title>브라우저, 실험 노트와 서버가 놓인 작은 웹 실험실</title>
+  <path d="M42 214c-16-55 18-104 68-101 27-75 111-92 162-53 58-39 155-19 175 38 80-6 140 38 145 94 47 0 71 30 65 57H38Z" fill="#efeee5"/>
+  <ellipse cx="352" cy="267" rx="294" ry="13" fill="#1b1d19" opacity=".05"/>
+  <path d="M31 250h617" stroke="#b6b7ac" stroke-width="2" stroke-linecap="round"/>
+  <g transform="rotate(-8 131 197)">
+    <rect x="63" y="131" width="136" height="111" rx="6" fill="#e9eddf" stroke="#7d856e" stroke-width="2"/>
+    <path d="M83 132v109" stroke="#abb695" stroke-width="2"/>
+    <path d="M96 149h62M96 156h41" stroke="#7d856e" stroke-width="2" stroke-linecap="round"/>
+    <g stroke="#7d856e" stroke-width="1.7">
+      <rect x="97" y="169" width="9" height="9" rx="1"/><rect x="97" y="188" width="9" height="9" rx="1"/><rect x="97" y="207" width="9" height="9" rx="1"/>
+      <path d="M115 174h55m-55 19h45m-45 19h51" stroke-linecap="round"/>
+    </g>
+    <path d="m99 172 3 3 5-7m-8 24 3 3 5-7" stroke="#7b2f9e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M68 149h7m-7 20h7m-7 20h7m-7 20h7m-7 20h7" stroke="#7d856e" stroke-width="3" stroke-linecap="round"/>
+  </g>
+  <rect x="220" y="60" width="267" height="177" rx="10" fill="#33372e"/>
+  <rect x="228" y="69" width="251" height="157" rx="4" fill="#fbfaf6"/>
+  <path d="M228 93h251" stroke="#d9d7cc" stroke-width="1.5"/>
+  <circle cx="241" cy="81" r="3" fill="#b5c48a"/><circle cx="252" cy="81" r="3" fill="#e8d27a"/><circle cx="263" cy="81" r="3" fill="#caa8d9"/>
+  <rect x="282" y="77" width="135" height="8" rx="4" fill="#e9e7dd"/>
+  <path d="m259 120-9 9 9 9m14-18 9 9-9 9m-7-22-5 26" stroke="#7b2f9e" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M298 121h64m-64 10h97" stroke="#b6b7ac" stroke-width="3" stroke-linecap="round"/>
+  <rect x="248" y="157" width="67" height="45" rx="4" fill="#e9eddf" stroke="#a3ad91" stroke-width="1.5"/>
+  <rect x="386" y="157" width="73" height="45" rx="4" fill="#f1e6f6" stroke="#c4a4d2" stroke-width="1.5"/>
+  <path d="M258 170h36m-36 8h45m-45 8h27M397 170h40m-40 8h49m-49 8h30" stroke="#8b8f82" stroke-width="2" stroke-linecap="round"/>
+  <path d="M324 169h52m-6-5 6 5-6 5m6 15h-52m6-5-6 5 6 5" stroke="#7b2f9e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="m220 236-28 17c-2 2-1 6 3 6h316c4 0 5-4 2-6l-26-17Z" fill="#e3e3d8" stroke="#8c9181" stroke-width="1.5"/>
+  <path d="M318 237h70l6 9h-82Z" fill="#fbfaf6" stroke="#b6b7ac"/>
+  <rect x="531" y="135" width="90" height="115" rx="7" fill="#e9eddf" stroke="#7d856e" stroke-width="2"/>
+  <path d="M541 145h70v25h-70Zm0 34h70v25h-70Zm0 34h70v25h-70Z" fill="#fbfaf6" stroke="#a3ad91" stroke-width="1.4"/>
+  <circle cx="551" cy="157" r="3" fill="#7b2f9e"/><circle cx="551" cy="191" r="3" fill="#4e5f38"/><circle cx="551" cy="225" r="3" fill="#4e5f38"/>
+  <path d="M567 155h33m-33 5h20m-20 29h33m-33 5h20m-20 29h33m-33 5h20" stroke="#b6b7ac" stroke-width="2" stroke-linecap="round"/>
+  <path d="M531 226h-13c-17 0-13 23-30 23h-5" stroke="#7b2f9e" stroke-width="2.5" stroke-linecap="round"/>
+  <g transform="rotate(15 176 102)">
+    <path d="M161 73h12v61h-12Z" fill="#e8d27a" stroke="#a79b61" stroke-width="1.5"/>
+    <path d="m161 134 6 13 6-13" fill="#f3e6cd" stroke="#a79b61" stroke-width="1.5"/>
+    <path d="m165 143 2 4 2-4" fill="#33372e"/>
+  </g>
+  <path d="M506 87v13m-6-6h12M110 88v10m-5-5h10" stroke="#b8b4a5" stroke-width="1.5" stroke-linecap="round"/>
+</svg>
