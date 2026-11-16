@@ -7,7 +7,7 @@ import httpx
 from fastapi import HTTPException, Request
 from fastapi.responses import RedirectResponse
 from sqlalchemy.dialects.postgresql import insert
-from sqlmodel import col
+from sqlmodel import col, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.config import get_settings
@@ -77,8 +77,6 @@ async def callback(request: Request, db: AsyncSession) -> RedirectResponse:
     response.delete_cookie(STATE_COOKIE, path="/api/auth")
     state = request.query_params.get("state", "")
     # Lock the one-time state so simultaneous callbacks cannot consume it twice.
-    from sqlmodel import select
-
     entry = (
         await db.exec(
             select(OAuthState)

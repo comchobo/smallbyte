@@ -242,6 +242,24 @@ async def read_repository(repo: str, task: dict[str, Any]) -> list[dict[str, str
         ) from exc
 
 
+def _reply_is_valid(reply: AssessmentReply, ids: set[str], turns: int) -> bool:
+    if not set(reply.checked) <= ids or len(reply.checked) != len(set(reply.checked)):
+        return False
+    if turns == 0 and reply.action != "question":
+        return False
+    if turns >= 10 and reply.action == "question":
+        return False
+    if reply.action == "question":
+        return True
+    if {c.id for c in reply.criteria} != ids or len(reply.criteria) != len(ids):
+        return False
+    if set(reply.checked) != ids:
+        return False
+    if not reply.strengths.strip() or not reply.improvements.strip():
+        return False
+    return (reply.action == "pass") == all(c.met for c in reply.criteria)
+
+
 async def assess(
     task: dict[str, Any],
     files: list[dict[str, str]],
@@ -305,30 +323,7 @@ async def assess(
                     if value.startswith("```json") and value.endswith("```"):
                         value = value[7:-3].strip()
                     reply = AssessmentReply.model_validate_json(value)
-                    valid = set(reply.checked) <= ids and len(reply.checked) == len(
-                        set(reply.checked)
-                    )
-                    if turns == 0:
-                        valid = valid and reply.action == "question"
-                    if turns >= 10:
-                        valid = valid and reply.action != "question"
-                    if reply.action != "question":
-                        valid = (
-                            valid
-                            and {c.id for c in reply.criteria} == ids
-                            and len(reply.criteria) == len(ids)
-                            and set(reply.checked) == ids
-                        )
-                        valid = (
-                            valid
-                            and bool(reply.strengths.strip())
-                            and bool(reply.improvements.strip())
-                        )
-                        valid = valid and (
-                            (reply.action == "pass")
-                            == all(c.met for c in reply.criteria)
-                        )
-                    if valid:
+                    if _reply_is_valid(reply, ids, turns):
                         return reply
                 except (ValidationError, ValueError, KeyError, TypeError):
                     pass
