@@ -53,51 +53,62 @@ export function CourseMap({
             : done
               ? "완료"
               : "예정";
+          const content = (
+            <>
+              <span className="course-stop-number" aria-hidden="true">
+                {locked ? (
+                  <Icon name="lock" />
+                ) : done && !current ? (
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    aria-hidden="true"
+                  >
+                    <path d="m6 12 4 4 8-8" />
+                  </svg>
+                ) : (
+                  index + 1
+                )}
+              </span>
+              <span className="course-stop-copy">
+                <strong>{task.concept}</strong>
+                <span className="course-stop-status">
+                  {status} · {task.minutes}분
+                  {locked && (
+                    <span className="course-stop-hint">
+                      · 진행 중인 과제를 마친 뒤 시작할 수 있습니다
+                    </span>
+                  )}
+                </span>
+                {!mini && (
+                  <span className="course-stop-title">{task.title}</span>
+                )}
+              </span>
+            </>
+          );
           return (
             <li
               key={task.id}
               className={current ? "is-current" : done ? "is-done" : ""}
             >
-              <Link
-                href={
-                  requiresLogin
-                    ? pageHref("login")
-                    : pageHref("preview", task.id)
-                }
-                aria-current={current ? "step" : undefined}
-              >
-                <span className="course-stop-number" aria-hidden="true">
-                  {locked ? (
-                    <Icon name="lock" />
-                  ) : done && !current ? (
-                    <svg
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      aria-hidden="true"
-                    >
-                      <path d="m6 12 4 4 8-8" />
-                    </svg>
-                  ) : (
-                    index + 1
-                  )}
-                </span>
-                <span className="course-stop-copy">
-                  <strong>{task.concept}</strong>
-                  <span className="course-stop-status">
-                    {status} · {task.minutes}분
-                    {locked && (
-                      <span className="sr-only">
-                        · 진행 중인 과제를 마친 뒤 시작할 수 있습니다
-                      </span>
-                    )}
-                  </span>
-                  {!mini && (
-                    <span className="course-stop-title">{task.title}</span>
-                  )}
-                </span>
-              </Link>
+              {locked ? (
+                <button type="button" aria-disabled="true">
+                  {content}
+                </button>
+              ) : (
+                <Link
+                  href={
+                    requiresLogin
+                      ? pageHref("login")
+                      : pageHref("preview", task.id)
+                  }
+                  aria-current={current ? "step" : undefined}
+                >
+                  {content}
+                </Link>
+              )}
             </li>
           );
         })}

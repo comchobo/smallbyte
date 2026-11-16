@@ -731,13 +731,26 @@ ol {
   border-right: 1px solid var(--muted);
   transform: rotate(45deg);
 }
-.course-stops a {
+.course-stops :is(a, button) {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   gap: 14px;
   padding: 0 16px 16px 0;
   text-decoration: none;
+}
+.course-stops button {
+  width: 100%;
+  text-align: left;
+  cursor: not-allowed;
+}
+.course-stop-hint {
+  display: none;
+  margin-top: 5px;
+  color: var(--purple);
+}
+.course-stops button:is(:hover, :focus-visible) .course-stop-hint {
+  display: block;
 }
 .course-stops :where(a:hover) strong {
   text-decoration: underline;
@@ -804,7 +817,7 @@ ol {
 .course-path.compact .course-stops {
   grid-template-columns: 1fr;
 }
-:where(.course-path.compact) .course-stops a {
+:where(.course-path.compact) .course-stops :is(a, button) {
   flex-direction: row;
   padding-bottom: 18px;
   align-items: flex-start;
@@ -823,7 +836,7 @@ ol {
 .course-path.compact .course-stop-copy {
   gap: 0;
 }
-.course-path.compact .course-stops li:last-child :where(a) {
+.course-path.compact .course-stops li:last-child :where(a, button) {
   padding-bottom: 0;
 }
 .preview-side .course-path {
@@ -1760,7 +1773,7 @@ summary {
   .course-stops {
     grid-template-columns: 1fr;
   }
-  .course-stops a {
+  .course-stops :is(a, button) {
     flex-direction: row;
     padding-bottom: 24px;
     gap: 16px;
