@@ -117,6 +117,17 @@ export async function api<T>(
   return response.json() as Promise<T>;
 }
 
+export const preferenceKeys = ["purpose", "goal", "experience"] as const;
+export const preferenceLabels: Record<keyof Preferences, string> = {
+  purpose: "학습 목적",
+  goal: "관심 분야",
+  experience: "현재 경험",
+};
+export const onboardingQuestions = [
+  "무엇을 위해 배우고 있나요?",
+  "어떤 분야가 궁금한가요?",
+  "어느 정도 경험이 있나요?",
+] as const;
 export const choices = {
   purpose: [
     [

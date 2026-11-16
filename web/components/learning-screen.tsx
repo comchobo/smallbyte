@@ -3,7 +3,10 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { Source, Transcript } from "@/components/attempt-panels";
 import { CourseMap } from "@/components/course-map";
+import { GitHubIcon, UserIcon } from "@/components/icons";
+import { Meta, TaskDocument } from "@/components/task-document";
 import {
   type Activity,
   ApiError,
@@ -13,8 +16,11 @@ import {
   type Dashboard,
   dateLabel,
   type History,
+  onboardingQuestions,
   type Preferences,
+  preferenceKeys,
   preferenceLabel,
+  preferenceLabels,
   type Task,
   type User,
 } from "@/lib/learning";
@@ -32,149 +38,6 @@ const titles: Record<Page, string> = {
   history: "학습 기록",
   mypage: "마이페이지",
 };
-
-function GitHubIcon() {
-  return (
-    <svg
-      className="icon"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.7"
-      aria-hidden="true"
-    >
-      <path d="M9 20c-5 1-5-2-7-2m14 4v-4a3.5 3.5 0 0 0-1-3c3-.3 6-1.5 6-6a5 5 0 0 0-1-3.5A5 5 0 0 0 20 2s-1.5-.5-4 1a14 14 0 0 0-8 0C5.5 1.5 4 2 4 2a5 5 0 0 0 0 3.5A5 5 0 0 0 3 9c0 4.5 3 5.7 6 6a3.5 3.5 0 0 0-1 3v4" />
-    </svg>
-  );
-}
-function UserIcon() {
-  return (
-    <svg
-      className="icon"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.7"
-      aria-hidden="true"
-    >
-      <circle cx="12" cy="8" r="4" />
-      <path d="M4 21v-2a8 8 0 0 1 16 0v2" />
-    </svg>
-  );
-}
-function Meta({ task }: { task: Task }) {
-  return (
-    <div className="meta">
-      <span>{task.area}</span>
-      <span>형식·언어 자유</span>
-      <span>예상 {task.minutes}분</span>
-    </div>
-  );
-}
-function Source({ attempt }: { attempt: Attempt }) {
-  return (
-    <details className="source" open>
-      <summary>제출한 작업물</summary>
-      <div className="source-inner">
-        <p className="small muted">{attempt.repo}</p>
-        <code>{attempt.task_snapshot.branch}</code>
-        {attempt.files.map((file) => (
-          <div className="code-panel" key={file.path}>
-            <div className="code-file">{file.path}</div>
-            <pre>
-              <code>{file.content}</code>
-            </pre>
-          </div>
-        ))}
-        <p className="notice">
-          평가 시작 시 가져온 파일입니다. 코드는 서버에서 실행하지 않습니다.
-        </p>
-      </div>
-    </details>
-  );
-}
-function Transcript({ attempt }: { attempt: Attempt }) {
-  const end = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    if (attempt.messages.length)
-      end.current?.scrollIntoView({ block: "nearest" });
-  }, [attempt.messages.length]);
-  return (
-    <div
-      className="chat-log"
-      role="log"
-      aria-label="평가 대화"
-      aria-live="polite"
-    >
-      {attempt.messages.map((m) => (
-        <div key={m.id} className={`message ${m.role}`}>
-          <div className="message-author">
-            {m.role === "user" ? "나의 설명" : "학습 파트너 · AI"}
-          </div>
-          <div className="message-text">{m.content}</div>
-        </div>
-      ))}
-      <div ref={end} />
-    </div>
-  );
-}
-function TaskDocument({ task }: { task: Task }) {
-  return (
-    <article className="task-document">
-      <h1>{task.title}</h1>
-      <Meta task={task} />
-      <p className="task-problem">{task.problem}</p>
-      <section className="document-section">
-        <h2>완료 조건</h2>
-        <ul className="requirements">
-          {task.requirements.map((r) => (
-            <li key={r}>{r}</li>
-          ))}
-        </ul>
-      </section>
-      <section className="document-section">
-        <h2>직접 해 볼 순서</h2>
-        <ol className="requirements">
-          {task.steps.map((s) => (
-            <li key={s}>{s}</li>
-          ))}
-        </ol>
-      </section>
-      <section className="document-section">
-        <h2>실험의 출발점</h2>
-        <div className="code-panel">
-          <pre>
-            <code>{task.starter}</code>
-          </pre>
-        </div>
-      </section>
-      <details className="read-task">
-        <summary>막힐 때 살펴볼 힌트</summary>
-        <ul className="requirements">
-          {task.hints.map((h) => (
-            <li key={h}>{h}</li>
-          ))}
-        </ul>
-      </details>
-      <section className="document-section">
-        <h2>제출 안내</h2>
-        <p>{task.submission_guidance}</p>
-        <p className="notice">
-          파일 형식은 자유입니다. 평가 대상 텍스트 파일 전체는 200KB 이내여야
-          합니다. 의존성·빌드 산출물·바이너리는 읽지 않습니다.
-        </p>
-      </section>
-      <section className="document-section">
-        <h2>대화에서 확인할 개념</h2>
-        <ul className="requirements">
-          {task.rubric.map((r) => (
-            <li key={r.id}>{r.title}</li>
-          ))}
-        </ul>
-      </section>
-    </article>
-  );
-}
 
 export function LearningScreen({
   route,
@@ -375,6 +238,16 @@ export function LearningScreen({
     };
   }, [page, user, query, filter, historyPage, handleError]);
 
+  const forgetSentAnswer = useCallback((a: Attempt) => {
+    if (
+      a.messages.some(
+        (m) => m.role === "user" && m.request_key === requestKey.current,
+      )
+    ) {
+      setAnswer("");
+      requestKey.current = null;
+    }
+  }, []);
   async function action(work: () => Promise<void>) {
     if (actionLock.current) return;
     actionLock.current = true;
@@ -404,14 +277,7 @@ export function LearningScreen({
       try {
         const a = await api<Attempt>(path, "POST", data);
         setAttempt(a);
-        if (
-          a.messages.some(
-            (m) => m.role === "user" && m.request_key === requestKey.current,
-          )
-        ) {
-          setAnswer("");
-          requestKey.current = null;
-        }
+        forgetSentAnswer(a);
         setDashboard(await api<Dashboard>("/dashboard"));
         go(
           a.status === "completed" ? "result" : "assessment",
@@ -423,15 +289,7 @@ export function LearningScreen({
           try {
             const a = await api<Attempt>(`/attempts/${attempt.id}`);
             setAttempt(a);
-            if (
-              a.messages.some(
-                (m) =>
-                  m.request_key === requestKey.current && m.role === "user",
-              )
-            ) {
-              setAnswer("");
-              requestKey.current = null;
-            }
+            forgetSentAnswer(a);
           } catch {}
         }
         throw e;
@@ -453,6 +311,7 @@ export function LearningScreen({
   const pending = attempt?.operation?.status === "running";
   const failed = attempt?.operation?.status === "failed";
   const ready = Boolean(user?.onboarding_complete);
+  const preferenceStep = preferenceKeys[step];
   const map = (mini = false, target = focus) => (
     <CourseMap
       tasks={tasks}
@@ -640,16 +499,16 @@ export function LearningScreen({
                 <aside className="onboard-aside">
                   <h1>나에게 맞는 코스를 만듭니다.</h1>
                   <ol className="step-list">
-                    {["학습 목적", "관심 분야", "현재 경험"].map((label, i) => (
+                    {preferenceKeys.map((key, i) => (
                       <li
-                        key={label}
+                        key={key}
                         className={
                           i === step ? "current" : i < step ? "done" : ""
                         }
                         aria-current={i === step ? "step" : undefined}
                       >
                         <span className="step-number">{i + 1}</span>
-                        {label}
+                        {preferenceLabels[key]}
                       </li>
                     ))}
                   </ol>
@@ -662,47 +521,35 @@ export function LearningScreen({
                     else void saveProfile(preferences);
                   }}
                 >
-                  <h2>
-                    {
-                      [
-                        "무엇을 위해 배우고 있나요?",
-                        "어떤 분야가 궁금한가요?",
-                        "어느 정도 경험이 있나요?",
-                      ][step]
-                    }
-                  </h2>
+                  <h2>{onboardingQuestions[step]}</h2>
                   <p>
                     가장 가까운 항목을 골라 주세요. 나중에 바꿀 수 있습니다.
                   </p>
                   <fieldset className="option-list">
                     <legend className="sr-only">
-                      {["학습 목적", "관심 분야", "현재 경험"][step]}
+                      {preferenceLabels[preferenceStep]}
                     </legend>
-                    {choices[
-                      (["purpose", "goal", "experience"] as const)[step]
-                    ].map(([value, title, desc]) => {
-                      const key = (["purpose", "goal", "experience"] as const)[
-                        step
-                      ];
-                      return (
-                        <label key={value} className="option">
-                          <input
-                            type="radio"
-                            name={key}
-                            value={value}
-                            checked={preferences[key] === value}
-                            onChange={() =>
-                              setPreferences({ ...preferences, [key]: value })
-                            }
-                            required
-                          />
-                          <span>
-                            <strong>{title}</strong>
-                            <small>{desc}</small>
-                          </span>
-                        </label>
-                      );
-                    })}
+                    {choices[preferenceStep].map(([value, title, desc]) => (
+                      <label key={value} className="option">
+                        <input
+                          type="radio"
+                          name={preferenceStep}
+                          value={value}
+                          checked={preferences[preferenceStep] === value}
+                          onChange={() =>
+                            setPreferences({
+                              ...preferences,
+                              [preferenceStep]: value,
+                            })
+                          }
+                          required
+                        />
+                        <span>
+                          <strong>{title}</strong>
+                          <small>{desc}</small>
+                        </span>
+                      </label>
+                    ))}
                   </fieldset>
                   {step === 2 && (
                     <div className="onboard-summary">
@@ -1456,25 +1303,23 @@ export function LearningScreen({
                           void saveProfile(Object.fromEntries(form));
                         }}
                       >
-                        {(["purpose", "goal", "experience"] as const).map(
-                          (key, i) => (
-                            <label key={key} htmlFor={`profile-${key}`}>
-                              {["학습 목적", "관심 분야", "현재 경험"][i]}
-                              <select
-                                key={user[key]}
-                                id={`profile-${key}`}
-                                name={key}
-                                defaultValue={user[key]}
-                              >
-                                {choices[key].map(([value, title]) => (
-                                  <option key={value} value={value}>
-                                    {title}
-                                  </option>
-                                ))}
-                              </select>
-                            </label>
-                          ),
-                        )}
+                        {preferenceKeys.map((key) => (
+                          <label key={key} htmlFor={`profile-${key}`}>
+                            {preferenceLabels[key]}
+                            <select
+                              key={user[key]}
+                              id={`profile-${key}`}
+                              name={key}
+                              defaultValue={user[key]}
+                            >
+                              {choices[key].map(([value, title]) => (
+                                <option key={value} value={value}>
+                                  {title}
+                                </option>
+                              ))}
+                            </select>
+                          </label>
+                        ))}
                         <button
                           className="primary"
                           disabled={busy}
