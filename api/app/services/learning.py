@@ -126,6 +126,83 @@ async def detail(db: AsyncSession, user: User, attempt_id: str) -> dict[str, Any
     }
 
 
+def _user_turns(transcript: list[Message]) -> int:
+    return sum(m.role == "user" for m in transcript)
+
+
+def _duplicate_answer(transcript: list[Message], answer: Answer) -> Message | None:
+    replay = next((m for m in transcript if m.request_key == answer.request_key), None)
+    if replay is None:
+        return None
+    if (
+        replay.content != answer.content.strip()
+        or transcript[replay.sequence - 1].id != answer.question_id
+    ):
+        raise HTTPException(409, "같은 요청 키에 다른 답변을 보낼 수 없습니다.")
+    return replay
+
+
+def _expire_previous_operation(previous: Operation | None) -> Operation | None:
+    if previous is None or previous.status != "running":
+        return None
+    if previous.expires_at > now():
+        raise HTTPException(409, "이전 응답을 기다리고 있습니다.")
+    previous.status = "failed"
+    previous.error = "요청이 중단되었습니다."
+    return previous
+
+
+def _validate_operation_choice(
+    previous: Operation | None,
+    attempt: Attempt,
+    *,
+    submission: str | None,
+    retry: bool,
+) -> None:
+    if retry:
+        if previous is None or previous.status != "failed":
+            raise HTTPException(409, "재시도할 요청이 없습니다.")
+    elif previous and previous.status == "failed":
+        # A repository read failure may be fixed by changing the URL. Once a
+        # snapshot exists, only retry the pending AI operation.
+        if attempt.files or submission is None:
+            raise HTTPException(409, "먼저 실패한 요청을 다시 시도해 주세요.")
+
+
+def _apply_submission(attempt: Attempt, submission: str | None) -> None:
+    if submission is None:
+        return
+    if attempt.files:
+        raise HTTPException(409, "제출 자료를 이미 읽었습니다. 대화를 이어가세요.")
+    attempt.repo = providers.repository_url(submission)
+
+
+def _validate_answer(
+    attempt: Attempt, transcript: list[Message], answer: Answer
+) -> None:
+    if (
+        attempt.status != "chatting"
+        or not transcript
+        or transcript[-1].role != "assistant"
+    ):
+        raise HTTPException(409, "AI 질문을 받은 뒤 답변해 주세요.")
+    if not answer.content.strip():
+        raise HTTPException(422, "답변을 입력해 주세요.")
+    if transcript[-1].id != answer.question_id:
+        raise HTTPException(
+            409,
+            "다른 기기에서 대화가 진행됐습니다. "
+            "최신 질문을 확인하고 다시 답변해 주세요.",
+        )
+    if _user_turns(transcript) >= 10:
+        raise HTTPException(409, "최종 평가를 다시 시도해 주세요.")
+
+
+def _ensure_operation_running(operation: Operation) -> None:
+    if operation.status != "running" or operation.expires_at <= now():
+        raise HTTPException(409, "요청이 만료되었습니다. 다시 시도하세요.")
+
+
 async def run_assessment(
     db: AsyncSession,
     user: User,
@@ -139,56 +216,19 @@ async def run_assessment(
     await repo.lock_user(db, user.id)
     attempt = await repo.owned(db, user.id, attempt_id)
     transcript = await repo.messages(db, attempt.id)
-    if answer:
-        duplicate = next(
-            (m for m in transcript if m.request_key == answer.request_key), None
-        )
-        if duplicate:
-            if (
-                duplicate.content != answer.content.strip()
-                or transcript[duplicate.sequence - 1].id != answer.question_id
-            ):
-                raise HTTPException(409, "같은 요청 키에 다른 답변을 보낼 수 없습니다.")
-            await db.commit()
-            return await detail(db, user, attempt.id)
+    if answer and _duplicate_answer(transcript, answer):
+        await db.commit()
+        return await detail(db, user, attempt.id)
     if attempt.status == "completed":
         raise HTTPException(409, "이미 완료된 평가입니다.")
     previous = await repo.latest_operation(db, attempt.id)
-    if previous and previous.status == "running" and previous.expires_at > now():
-        raise HTTPException(409, "이전 응답을 기다리고 있습니다.")
-    if previous and previous.status == "running":
-        previous.status = "failed"
-        previous.error = "요청이 중단되었습니다."
-        db.add(previous)
-    if retry:
-        if previous is None or previous.status != "failed":
-            raise HTTPException(409, "재시도할 요청이 없습니다.")
-    elif previous and previous.status == "failed":
-        # A repository read failure may be fixed by changing the URL. Once a
-        # snapshot exists, only retry the pending AI operation.
-        if attempt.files or submission is None:
-            raise HTTPException(409, "먼저 실패한 요청을 다시 시도해 주세요.")
-    if submission is not None:
-        if attempt.files:
-            raise HTTPException(409, "제출 자료를 이미 읽었습니다. 대화를 이어가세요.")
-        attempt.repo = providers.repository_url(submission)
+    expired = _expire_previous_operation(previous)
+    if expired:
+        db.add(expired)
+    _validate_operation_choice(previous, attempt, submission=submission, retry=retry)
+    _apply_submission(attempt, submission)
     if answer:
-        if (
-            attempt.status != "chatting"
-            or not transcript
-            or transcript[-1].role != "assistant"
-        ):
-            raise HTTPException(409, "AI 질문을 받은 뒤 답변해 주세요.")
-        if not answer.content.strip():
-            raise HTTPException(422, "답변을 입력해 주세요.")
-        if transcript[-1].id != answer.question_id:
-            raise HTTPException(
-                409,
-                "다른 기기에서 대화가 진행됐습니다. "
-                "최신 질문을 확인하고 다시 답변해 주세요.",
-            )
-        if sum(m.role == "user" for m in transcript) >= 10:
-            raise HTTPException(409, "최종 평가를 다시 시도해 주세요.")
+        _validate_answer(attempt, transcript, answer)
     if (
         await repo.recent_operations(db, user.id, now() - timedelta(minutes=1))
         >= settings.ai_requests_per_minute
@@ -222,8 +262,7 @@ async def run_assessment(
             )
             await repo.lock_user(db, user.id)
             await db.refresh(operation)
-            if operation.status != "running" or operation.expires_at <= now():
-                raise HTTPException(409, "요청이 만료되었습니다. 다시 시도하세요.")
+            _ensure_operation_running(operation)
             attempt.files = files
             attempt.status = "chatting"
             db.add(attempt)
@@ -234,13 +273,12 @@ async def run_assessment(
             attempt.task_snapshot,
             attempt.files,
             payload,
-            sum(m.role == "user" for m in transcript),
+            _user_turns(transcript),
         )
         await repo.lock_user(db, user.id)
         await db.refresh(operation)
         await db.refresh(attempt)
-        if operation.status != "running" or operation.expires_at <= now():
-            raise HTTPException(409, "요청이 만료되었습니다. 다시 시도하세요.")
+        _ensure_operation_running(operation)
         db.add(
             Message(
                 attempt_id=attempt.id,
@@ -324,14 +362,8 @@ async def activity(db: AsyncSession, user: User) -> dict[str, Any]:
         )
     )
     counts = Counter(e.created_at.astimezone(zone).date().isoformat() for e in events)
-    return {
-        "start": start_date,
-        "today": today,
-        "days": [
-            {
-                "date": (start_date + timedelta(days=i)).isoformat(),
-                "count": counts[(start_date + timedelta(days=i)).isoformat()],
-            }
-            for i in range(182)
-        ],
-    }
+    days = []
+    for offset in range(182):
+        date = (start_date + timedelta(days=offset)).isoformat()
+        days.append({"date": date, "count": counts[date]})
+    return {"start": start_date, "today": today, "days": days}

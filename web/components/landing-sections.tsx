@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { ConceptDiagram } from "@/components/concept-diagram";
-import { Icon, type IconName, taskIcon } from "@/components/icon";
+import { Icon, type IconName, taskIcon } from "@/components/icons";
 import type { Task } from "@/lib/learning";
 import { pageHref } from "@/lib/routes";
 

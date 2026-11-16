@@ -1,4 +1,4 @@
-import { Icon, type IconName, taskIcon } from "@/components/icon";
+import { Icon, type IconName, taskIcon } from "@/components/icons";
 
 function Endpoint({
   icon,

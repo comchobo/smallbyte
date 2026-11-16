@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Icon } from "@/components/icon";
+import { Icon } from "@/components/icons";
 import type { Task } from "@/lib/learning";
 import { pageHref } from "@/lib/routes";
 
@@ -20,8 +20,9 @@ export function CourseMap({
   mini?: boolean;
   requiresLogin?: boolean;
 }) {
+  const byId = new Map(tasks.map((task) => [task.id, task]));
   const course = order.flatMap((id) => {
-    const task = tasks.find((item) => item.id === id);
+    const task = byId.get(id);
     return task ? [task] : [];
   });
   return (

@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Icon } from "@/components/icon";
+import { Icon } from "@/components/icons";
 import { type Activity, ApiError, api } from "@/lib/learning";
 
 export function ActivityPanel({

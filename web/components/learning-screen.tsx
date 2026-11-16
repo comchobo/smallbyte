@@ -4,13 +4,14 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { ActivityPanel } from "@/components/activity-panel";
+import { Source, Transcript } from "@/components/attempt-panels";
 import { Avatar } from "@/components/avatar";
 import { ConceptDiagram } from "@/components/concept-diagram";
 import { CourseMap } from "@/components/course-map";
-import { Icon } from "@/components/icon";
+import { Icon } from "@/components/icons";
 import { LandingSections } from "@/components/landing-sections";
 import { Logo } from "@/components/logo";
-import { TaskHints } from "@/components/task-hints";
+import { Meta, TaskDocument } from "@/components/task-document";
 import {
   ApiError,
   type Attempt,
@@ -19,8 +20,11 @@ import {
   type Dashboard,
   dateLabel,
   type History,
+  onboardingQuestions,
   type Preferences,
+  preferenceKeys,
   preferenceLabel,
+  preferenceLabels,
   type Task,
   type User,
 } from "@/lib/learning";
@@ -39,20 +43,6 @@ const titles: Record<Page, string> = {
   mypage: "마이페이지",
 };
 
-function GitHubIcon() {
-  return (
-    <svg
-      className="icon"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.7"
-      aria-hidden="true"
-    >
-      <path d="M9 20c-5 1-5-2-7-2m14 4v-4a3.5 3.5 0 0 0-1-3c3-.3 6-1.5 6-6a5 5 0 0 0-1-3.5A5 5 0 0 0 20 2s-1.5-.5-4 1a14 14 0 0 0-8 0C5.5 1.5 4 2 4 2a5 5 0 0 0 0 3.5A5 5 0 0 0 3 9c0 4.5 3 5.7 6 6a3.5 3.5 0 0 0-1 3v4" />
-    </svg>
-  );
-}
 function AccountMenu({
   user,
   busy,
@@ -139,171 +129,6 @@ function AccountMenu({
     </fieldset>
   );
 }
-function Meta({ task }: { task: Task }) {
-  return (
-    <div className="meta">
-      <span>{task.area}</span>
-      <span>
-        <Icon name="code" />
-        형식·언어 자유
-      </span>
-      <span>
-        <Icon name="clock" />
-        예상 {task.minutes}분
-      </span>
-    </div>
-  );
-}
-function Source({ attempt }: { attempt: Attempt }) {
-  return (
-    <details className="source" open>
-      <summary>제출한 작업물</summary>
-      <div className="source-inner">
-        <p className="small muted">{attempt.repo}</p>
-        <code>{attempt.task_snapshot.branch}</code>
-        {attempt.files.map((file) => (
-          <div className="code-panel" key={file.path}>
-            <div className="code-file">{file.path}</div>
-            <pre>
-              <code>{file.content}</code>
-            </pre>
-          </div>
-        ))}
-        <p className="notice">
-          평가 시작 시 가져온 파일입니다. 코드는 서버에서 실행하지 않습니다.
-        </p>
-      </div>
-    </details>
-  );
-}
-function Transcript({ attempt }: { attempt: Attempt }) {
-  const end = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    if (attempt.messages.length)
-      end.current?.scrollIntoView({ block: "nearest" });
-  }, [attempt.messages.length]);
-  return (
-    <div
-      className="chat-log"
-      role="log"
-      aria-label="평가 대화"
-      aria-live="polite"
-    >
-      {attempt.messages.map((m) => (
-        <div key={m.id} className={`message ${m.role}`}>
-          <div className="message-author">
-            {m.role === "user" ? "나의 설명" : "학습 파트너 · AI"}
-          </div>
-          <div className="message-text">{m.content}</div>
-        </div>
-      ))}
-      <div ref={end} />
-    </div>
-  );
-}
-function TaskStarter({ text }: { text: string }) {
-  return text.split(/```[^\n]*\n([\s\S]*?)```/g).map((part, index) =>
-    !part.trim() ? null : index % 2 ? (
-      <div className="code-panel" key={part}>
-        <pre>
-          <code>{part.trimEnd()}</code>
-        </pre>
-      </div>
-    ) : (
-      <p className="starter-note" key={part}>
-        {part.trim()}
-      </p>
-    ),
-  );
-}
-function TaskDocument({ task }: { task: Task }) {
-  const id = useId();
-  return (
-    <article className="task-document">
-      <header className="task-intro">
-        <h1>{task.title}</h1>
-        <Meta task={task} />
-        <p className="task-problem">{task.problem}</p>
-      </header>
-      <ConceptDiagram taskId={task.id} />
-      <nav className="task-contents" aria-label="과제 목차">
-        <a href={`#${id}-steps`}>실험 순서</a>
-        <a href={`#${id}-criteria`}>완료 기준</a>
-        <a href={`#${id}-submit`}>제출 방법</a>
-        <a href={`#${id}-help`}>참고 자료</a>
-      </nav>
-      <section className="document-section" id={`${id}-steps`}>
-        <h2>실험 순서</h2>
-        <ol className="experiment-steps">
-          {task.steps.map((step) => {
-            const separator = task.version >= 3 ? step.indexOf(". ") : -1;
-            return (
-              <li key={step}>
-                {separator < 0 ? (
-                  step
-                ) : (
-                  <div>
-                    <h3>{step.slice(0, separator)}</h3>
-                    <p>{step.slice(separator + 2)}</p>
-                  </div>
-                )}
-              </li>
-            );
-          })}
-        </ol>
-      </section>
-      <section className="document-section" id={`${id}-criteria`}>
-        <h2>완료 기준</h2>
-        <p>아래 동작을 코드나 관찰 결과에 연결해 설명할 수 있으면 됩니다.</p>
-        <ul className="completion-criteria">
-          {task.requirements.map((requirement) => (
-            <li key={requirement}>{requirement}</li>
-          ))}
-        </ul>
-      </section>
-      <section className="document-section" id={`${id}-submit`}>
-        <h2>제출 방법</h2>
-        <p>{task.submission_guidance}</p>
-        <dl className="submission-facts">
-          <div>
-            <dt>공개 GitHub 저장소의 브랜치</dt>
-            <dd>
-              <code>{task.branch}</code>
-            </dd>
-          </div>
-          <div>
-            <dt>읽을 수 있는 파일</dt>
-            <dd>텍스트 파일 합계 200KB 이내 · 언어·형식 자유</dd>
-          </div>
-          <div>
-            <dt>평가 방식</dt>
-            <dd>제출 파일을 읽고 최대 10회 대화 · 코드 실행 없음</dd>
-          </div>
-        </dl>
-      </section>
-      <section className="document-section task-resources" id={`${id}-help`}>
-        <h2>참고 자료</h2>
-        <details className="read-task">
-          <summary>시작 코드와 명령 예시</summary>
-          <TaskStarter text={task.starter} />
-        </details>
-        <details className="read-task">
-          <summary>막혔을 때 확인할 힌트</summary>
-          <TaskHints task={task} />
-        </details>
-        <details className="read-task">
-          <summary>대화에서 확인할 개념</summary>
-          <ul className="requirements">
-            {task.rubric.map((item) => (
-              <li key={item.id}>{item.title}</li>
-            ))}
-          </ul>
-        </details>
-      </section>
-    </article>
-  );
-}
-
 function validateRepository(value: string): string {
   const candidate = value
     .trim()
@@ -559,19 +384,23 @@ export function LearningScreen({
       go(a.status === "chatting" ? "assessment" : "task");
     });
   }
+  const forgetSentAnswer = useCallback((a: Attempt) => {
+    if (
+      a.messages.some(
+        (m) => m.role === "user" && m.request_key === requestKey.current,
+      )
+    ) {
+      setAnswer("");
+      requestKey.current = null;
+    }
+  }, []);
+
   async function assess(path: string, data?: unknown) {
     await action(async () => {
       try {
         const a = await api<Attempt>(path, "POST", data);
         setAttempt(a);
-        if (
-          a.messages.some(
-            (m) => m.role === "user" && m.request_key === requestKey.current,
-          )
-        ) {
-          setAnswer("");
-          requestKey.current = null;
-        }
+        forgetSentAnswer(a);
         setDashboard(await api<Dashboard>("/dashboard"));
         go(
           a.status === "completed" ? "result" : "assessment",
@@ -583,15 +412,7 @@ export function LearningScreen({
           try {
             const a = await api<Attempt>(`/attempts/${attempt.id}`);
             setAttempt(a);
-            if (
-              a.messages.some(
-                (m) =>
-                  m.request_key === requestKey.current && m.role === "user",
-              )
-            ) {
-              setAnswer("");
-              requestKey.current = null;
-            }
+            forgetSentAnswer(a);
           } catch {}
         }
         throw e;
@@ -627,6 +448,7 @@ export function LearningScreen({
   const pending = attempt?.operation?.status === "running";
   const failed = attempt?.operation?.status === "failed";
   const ready = Boolean(user?.onboarding_complete);
+  const preferenceStep = preferenceKeys[step];
   const entryHref = user ? (ready ? "/home" : "/onboarding") : "/login";
   const entryLabel = user
     ? ready
@@ -772,7 +594,7 @@ export function LearningScreen({
                       코스를 따라가고, 작업물에 대한 대화로 이해를 확인하세요.
                     </p>
                     <Link className="primary" href={entryHref}>
-                      {user ? <Icon name="arrow" /> : <GitHubIcon />}
+                      {user ? <Icon name="arrow" /> : <Icon name="github" />}
                       {entryLabel}
                     </Link>
                   </section>
@@ -815,16 +637,16 @@ export function LearningScreen({
                 <aside className="onboard-aside">
                   <h1>나에게 맞는 코스를 만듭니다.</h1>
                   <ol className="step-list">
-                    {["학습 목적", "관심 분야", "현재 경험"].map((label, i) => (
+                    {preferenceKeys.map((key, i) => (
                       <li
-                        key={label}
+                        key={key}
                         className={
                           i === step ? "current" : i < step ? "done" : ""
                         }
                         aria-current={i === step ? "step" : undefined}
                       >
                         <span className="step-number">{i + 1}</span>
-                        {label}
+                        {preferenceLabels[key]}
                       </li>
                     ))}
                   </ol>
@@ -837,47 +659,35 @@ export function LearningScreen({
                     else void saveProfile(preferences);
                   }}
                 >
-                  <h2>
-                    {
-                      [
-                        "무엇을 위해 배우고 있나요?",
-                        "어떤 분야가 궁금한가요?",
-                        "어느 정도 경험이 있나요?",
-                      ][step]
-                    }
-                  </h2>
+                  <h2>{onboardingQuestions[step]}</h2>
                   <p>
                     가장 가까운 항목을 골라 주세요. 나중에 바꿀 수 있습니다.
                   </p>
                   <fieldset className="option-list">
                     <legend className="sr-only">
-                      {["학습 목적", "관심 분야", "현재 경험"][step]}
+                      {preferenceLabels[preferenceStep]}
                     </legend>
-                    {choices[
-                      (["purpose", "goal", "experience"] as const)[step]
-                    ].map(([value, title, desc]) => {
-                      const key = (["purpose", "goal", "experience"] as const)[
-                        step
-                      ];
-                      return (
-                        <label key={value} className="option">
-                          <input
-                            type="radio"
-                            name={key}
-                            value={value}
-                            checked={preferences[key] === value}
-                            onChange={() =>
-                              setPreferences({ ...preferences, [key]: value })
-                            }
-                            required
-                          />
-                          <span>
-                            <strong>{title}</strong>
-                            <small>{desc}</small>
-                          </span>
-                        </label>
-                      );
-                    })}
+                    {choices[preferenceStep].map(([value, title, desc]) => (
+                      <label key={value} className="option">
+                        <input
+                          type="radio"
+                          name={preferenceStep}
+                          value={value}
+                          checked={preferences[preferenceStep] === value}
+                          onChange={() =>
+                            setPreferences({
+                              ...preferences,
+                              [preferenceStep]: value,
+                            })
+                          }
+                          required
+                        />
+                        <span>
+                          <strong>{title}</strong>
+                          <small>{desc}</small>
+                        </span>
+                      </label>
+                    ))}
                   </fieldset>
                   {step === 2 && (
                     <div className="onboard-summary">
@@ -1032,16 +842,12 @@ export function LearningScreen({
                         나의 학습 설정
                       </h3>
                       <dl>
-                        {(["purpose", "goal", "experience"] as const).map(
-                          (key, index) => (
-                            <div key={key}>
-                              <dt>
-                                {["학습 목적", "관심 분야", "현재 경험"][index]}
-                              </dt>
-                              <dd>{preferenceLabel(key, user?.[key] || "")}</dd>
-                            </div>
-                          ),
-                        )}
+                        {preferenceKeys.map((key) => (
+                          <div key={key}>
+                            <dt>{preferenceLabels[key]}</dt>
+                            <dd>{preferenceLabel(key, user?.[key] || "")}</dd>
+                          </div>
+                        ))}
                       </dl>
                     </section>
                     <Link className="link-button" href="/mypage">
@@ -1662,25 +1468,23 @@ export function LearningScreen({
                             void saveProfile(Object.fromEntries(form));
                           }}
                         >
-                          {(["purpose", "goal", "experience"] as const).map(
-                            (key, i) => (
-                              <label key={key} htmlFor={`profile-${key}`}>
-                                {["학습 목적", "관심 분야", "현재 경험"][i]}
-                                <select
-                                  key={user[key]}
-                                  id={`profile-${key}`}
-                                  name={key}
-                                  defaultValue={user[key]}
-                                >
-                                  {choices[key].map(([value, title]) => (
-                                    <option key={value} value={value}>
-                                      {title}
-                                    </option>
-                                  ))}
-                                </select>
-                              </label>
-                            ),
-                          )}
+                          {preferenceKeys.map((key) => (
+                            <label key={key} htmlFor={`profile-${key}`}>
+                              {preferenceLabels[key]}
+                              <select
+                                key={user[key]}
+                                id={`profile-${key}`}
+                                name={key}
+                                defaultValue={user[key]}
+                              >
+                                {choices[key].map(([value, title]) => (
+                                  <option key={value} value={value}>
+                                    {title}
+                                  </option>
+                                ))}
+                              </select>
+                            </label>
+                          ))}
                           <button
                             className="primary"
                             disabled={busy}
@@ -1773,12 +1577,12 @@ export function LearningScreen({
             </span>
             <i />
             <span>
-              <GitHubIcon />
+              <Icon name="github" />
             </span>
           </div>
           <p className="login-prompt">GitHub 계정으로 시작하세요.</p>
           <a className="primary" href="/api/auth/github">
-            <GitHubIcon />
+            <Icon name="github" />
             GitHub로 로그인
           </a>
           <button
