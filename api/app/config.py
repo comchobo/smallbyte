@@ -20,6 +20,7 @@ class Settings(BaseSettings):
     ollama_model: str = "deepseek-v4.1-flash:1017"
     github_timeout: float = 15
     ai_timeout: float = 120
+    request_max_bytes: int = 1_000_000
     submission_max_bytes: int = 200_000
     github_download_max_bytes: int = 2_000_000
     ai_requests_per_minute: int = 6
