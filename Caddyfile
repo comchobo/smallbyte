@@ -1,3 +1,6 @@
 {$DOMAIN} {
+    request_body {
+        max_size {$REQUEST_MAX_BYTES:1000000}
+    }
     reverse_proxy web:3000
 }
