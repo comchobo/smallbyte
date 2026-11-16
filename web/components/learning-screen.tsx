@@ -1,11 +1,9 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { CourseMap } from "@/components/course-map";
 import { LeaderboardPanel } from "@/components/leaderboard-panel";
-import { AccountMenu } from "@/components/learning/account-menu";
 import { AssessmentScreen } from "@/components/learning/assessment-screen";
 import { EntryScreen } from "@/components/learning/entry-screen";
 import { HistoryScreen } from "@/components/learning/history-screen";
@@ -16,7 +14,7 @@ import { PreviewScreen } from "@/components/learning/preview-screen";
 import { ProfileScreen } from "@/components/learning/profile-screen";
 import { ResultScreen } from "@/components/learning/result-screen";
 import { TaskScreen } from "@/components/learning/task-screen";
-import { Logo } from "@/components/logo";
+import { SiteHeader } from "@/components/site-header";
 import {
   ApiError,
   type Attempt,
@@ -408,52 +406,13 @@ export function LearningScreen({
       >
         본문으로 이동
       </button>
-      <header className="header">
-        <div className="header-inner">
-          <Link className="brand" href="/" aria-label="smallbyte 홈">
-            <Logo />
-          </Link>
-          {ready && (
-            <nav className="nav" aria-label="주요 메뉴">
-              <Link
-                href="/home"
-                aria-current={
-                  ["home", "preview", "task", "assessment"].includes(page)
-                    ? "page"
-                    : undefined
-                }
-              >
-                학습
-              </Link>
-              <Link
-                href="/history"
-                aria-current={
-                  ["history", "result"].includes(page) ? "page" : undefined
-                }
-              >
-                기록
-              </Link>
-              <Link
-                href="/leaderboard"
-                aria-current={page === "leaderboard" ? "page" : undefined}
-              >
-                리더보드
-              </Link>
-            </nav>
-          )}
-          <div className="header-right">
-            {user ? (
-              <AccountMenu
-                user={user}
-                busy={busy}
-                onLogout={() => void logout()}
-              />
-            ) : page !== "login" ? (
-              <Link href="/login">로그인</Link>
-            ) : null}
-          </div>
-        </div>
-      </header>
+      <SiteHeader
+        page={page}
+        user={user}
+        ready={ready}
+        busy={busy}
+        onLogout={() => void logout()}
+      />
       <main
         className="page"
         id="main"
