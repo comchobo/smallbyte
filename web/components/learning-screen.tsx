@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { CourseMap } from "@/components/course-map";
+import { LeaderboardPanel } from "@/components/leaderboard-panel";
 import { AccountMenu } from "@/components/learning/account-menu";
 import { AssessmentScreen } from "@/components/learning/assessment-screen";
 import { EntryScreen } from "@/components/learning/entry-screen";
@@ -38,6 +39,7 @@ const titles: Record<Page, string> = {
   assessment: "이해도 확인",
   result: "피드백",
   history: "학습 기록",
+  leaderboard: "리더보드",
   mypage: "마이페이지",
 };
 
@@ -431,6 +433,12 @@ export function LearningScreen({
               >
                 기록
               </Link>
+              <Link
+                href="/leaderboard"
+                aria-current={page === "leaderboard" ? "page" : undefined}
+              >
+                리더보드
+              </Link>
             </nav>
           )}
           <div className="header-right">
@@ -568,6 +576,9 @@ export function LearningScreen({
                 onResume={resume}
                 onBegin={begin}
               />
+            )}
+            {page === "leaderboard" && user && (
+              <LeaderboardPanel userId={user.id} onError={handleError} />
             )}
             {page === "history" && (
               <HistoryScreen

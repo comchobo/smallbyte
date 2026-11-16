@@ -105,3 +105,8 @@ async def history(
 @router.get("/activity")
 async def activity(user: Account, db: Database):
     return await learning.activity(db, user)
+
+
+@router.get("/leaderboard")
+async def leaderboard(user: Account, db: Database):
+    return await learning.leaderboard(db)

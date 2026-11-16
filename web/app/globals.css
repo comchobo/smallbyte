@@ -2175,6 +2175,127 @@ summary {
   margin-top: 20px;
   font-size: 13px;
 }
+.leaderboard {
+  max-width: 920px;
+}
+.leaderboard-description {
+  margin-top: 10px;
+}
+.leaderboard-guide {
+  color: var(--muted);
+  font-size: 12px;
+  margin: 16px 0;
+}
+.leaderboard-period {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+  margin: 28px 0 14px;
+}
+.leaderboard-period h2 {
+  font-size: 17px;
+}
+.leaderboard-period p {
+  color: var(--muted);
+  font-size: 12px;
+}
+.leaderboard-table {
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: collapse;
+  background: var(--card);
+  border-top: 2px solid var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+.leaderboard-table th,
+.leaderboard-table td {
+  text-align: left;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--line);
+}
+.leaderboard-table thead th {
+  background: var(--tint);
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+  padding-block: 12px;
+}
+.leaderboard-table th:first-child {
+  width: 80px;
+}
+.leaderboard-table th:last-child,
+.leaderboard-table td:last-child {
+  text-align: right;
+  width: 120px;
+}
+.leaderboard-table tr[data-self] {
+  background: var(--purple-tint);
+}
+.leaderboard-rank {
+  font-weight: 700;
+}
+.leaderboard-user {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.leaderboard-user .illustrated-avatar {
+  width: 40px;
+  height: 40px;
+  flex: none;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+}
+.leaderboard-identity {
+  min-width: 0;
+  font-weight: 400;
+  overflow-wrap: anywhere;
+}
+.leaderboard-identity > div {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+.leaderboard-identity > span {
+  font-size: 12px;
+}
+.leaderboard-self {
+  color: var(--purple);
+  font-size: 11px;
+  font-weight: 700;
+  flex: none;
+}
+.leaderboard-count strong {
+  font-size: 18px;
+  margin-right: 4px;
+}
+@media (max-width: 520px) {
+  .header-inner:has(.nav) .nav {
+    order: 3;
+    width: 100%;
+    min-height: 44px;
+  }
+  .leaderboard-table th,
+  .leaderboard-table td {
+    padding: 14px 10px;
+  }
+  .leaderboard-table th:first-child {
+    width: 50px;
+  }
+  .leaderboard-table th:last-child,
+  .leaderboard-table td:last-child {
+    width: 88px;
+  }
+  .leaderboard-user {
+    gap: 8px;
+  }
+  .leaderboard-user .illustrated-avatar {
+    width: 30px;
+    height: 30px;
+  }
+}
 .profile-main {
   display: grid;
   gap: 24px;
