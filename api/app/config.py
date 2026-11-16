@@ -13,7 +13,7 @@ class Settings(BaseSettings):
     postgres_db: str = "smallbyte"
     postgres_host: str = "db"
     postgres_port: int = 5432
-    app_origin: str = "http://localhost:3307"
+    app_origin: str = "http://localhost:3000"
     github_client_id: str = ""
     github_client_secret: SecretStr = SecretStr("")
     ollama_api_key: SecretStr = SecretStr("")

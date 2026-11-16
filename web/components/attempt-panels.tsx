@@ -19,7 +19,7 @@ export function Source({ attempt }: { attempt: Attempt }) {
           </div>
         ))}
         <p className="notice">
-          평가 시작 시 읽은 자료입니다. 서버에서 코드를 실행하지 않습니다.
+          평가 시작 시 가져온 파일입니다. 코드는 서버에서 실행하지 않습니다.
         </p>
       </div>
     </details>
