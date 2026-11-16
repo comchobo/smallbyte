@@ -2213,12 +2213,11 @@ summary {
   color: var(--muted);
 }
 .login-connection > .login-provider-brand {
-  width: 112px;
-  padding: 12px;
-  border-radius: 6px;
+  padding: 6px;
 }
 .login-connection .brand-logo {
-  width: 84px;
+  width: 30px;
+  height: auto;
 }
 .landing-sections {
   margin-top: 64px;
