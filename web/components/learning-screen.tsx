@@ -10,6 +10,7 @@ import { ConceptDiagram } from "@/components/concept-diagram";
 import { CourseMap } from "@/components/course-map";
 import { Icon } from "@/components/icons";
 import { LandingSections } from "@/components/landing-sections";
+import { LeaderboardPanel } from "@/components/leaderboard-panel";
 import { Logo } from "@/components/logo";
 import { Meta, TaskDocument } from "@/components/task-document";
 import {
@@ -40,6 +41,7 @@ const titles: Record<Page, string> = {
   assessment: "이해도 확인",
   result: "피드백",
   history: "학습 기록",
+  leaderboard: "리더보드",
   mypage: "마이페이지",
 };
 
@@ -524,6 +526,12 @@ export function LearningScreen({
                 }
               >
                 기록
+              </Link>
+              <Link
+                href="/leaderboard"
+                aria-current={page === "leaderboard" ? "page" : undefined}
+              >
+                리더보드
               </Link>
             </nav>
           )}
@@ -1257,6 +1265,9 @@ export function LearningScreen({
                   </button>
                 </div>
               ))}
+            {page === "leaderboard" && user && (
+              <LeaderboardPanel userId={user.id} onError={handleError} />
+            )}
             {page === "history" && (
               <>
                 <header className="page-title">

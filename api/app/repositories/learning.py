@@ -1,7 +1,11 @@
+from datetime import datetime
+from typing import Any
+
 from fastapi import HTTPException
 from sqlalchemy import func
 from sqlmodel import col, select
 from sqlmodel.ext.asyncio.session import AsyncSession
+from sqlmodel.sql.expression import Select
 
 from app.models import ActivityEvent, Attempt, Message, Operation, Task, User
 
@@ -81,3 +85,34 @@ async def recent_operations(db: AsyncSession, user_id: str, since) -> int:
             .where(Operation.user_id == user_id, Operation.created_at > since)
         )
     ).one()
+
+
+async def leaderboard(
+    db: AsyncSession, start: datetime, end: datetime
+) -> list[dict[str, Any]]:
+    count = func.count(col(ActivityEvent.id))
+    ranked = (
+        Select(
+            col(User.id),
+            col(User.name),
+            col(User.handle),
+            count.label("count"),
+            func.rank().over(order_by=count.desc()).label("rank"),
+        )
+        .join(ActivityEvent, col(ActivityEvent.user_id) == col(User.id))
+        .where(
+            col(ActivityEvent.created_at) >= start,
+            col(ActivityEvent.created_at) <= end,
+        )
+        .group_by(col(User.id))
+        .subquery()
+    )
+    rows = await db.exec(
+        Select(ranked)
+        .where(ranked.c.rank <= 50)
+        .order_by(ranked.c.rank, func.lower(ranked.c.handle), ranked.c.id)
+    )
+    return [
+        {"id": id, "name": name, "handle": handle, "count": count, "rank": rank}
+        for id, name, handle, count, rank in rows
+    ]

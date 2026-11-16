@@ -1,7 +1,7 @@
 import asyncio
 import logging
 from collections import Counter
-from datetime import timedelta
+from datetime import datetime, time, timedelta
 from typing import Any
 from zoneinfo import ZoneInfo
 
@@ -367,3 +367,15 @@ async def activity(db: AsyncSession, user: User) -> dict[str, Any]:
         date = (start_date + timedelta(days=offset)).isoformat()
         days.append({"date": date, "count": counts[date]})
     return {"start": start_date, "today": today, "days": days}
+
+
+async def leaderboard(db: AsyncSession) -> dict[str, Any]:
+    zone = ZoneInfo("Asia/Seoul")
+    end = now()
+    today = end.astimezone(zone).date()
+    start = datetime.combine(today - timedelta(days=6), time.min, tzinfo=zone)
+    return {
+        "start": start.date(),
+        "today": today,
+        "items": await repo.leaderboard(db, start, end),
+    }
